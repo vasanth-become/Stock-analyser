@@ -28,6 +28,7 @@
     "next-auth": "^5.0.0-beta.25",
     "node-cron": "^4.2.1",
     "prisma": "^7.8.0",
+    "razorpay": "^2.9.6",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^3.8.1",

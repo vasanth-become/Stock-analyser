@@ -7,26 +7,50 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  password      String?
-  emailVerified DateTime?
-  image         String?
-  plan          Plan      @default(FREE)
-  onboarded     Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                   String              @id @default(cuid())
+  email                String              @unique
+  name                 String?
+  password             String?
+  emailVerified        DateTime?
+  image                String?
+  plan                 Plan                @default(FREE)
+  onboarded            Boolean             @default(false)
+  // Subscription fields
+  razorpayCustomerId   String?             @unique
+  subscriptionId       String?             @unique  // Razorpay subscription_id
+  subscriptionStatus   SubscriptionStatus?
+  planExpiresAt        DateTime?
+  billingCycle         BillingCycle?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
-  profile       InvestorProfile?
-  watchlists    Watchlist[]
-  analyses      Analysis[]
-  alerts        Alert[]
-  sessions      Session[]
-  accounts      Account[]
-  portfolio     Portfolio?
+  profile              InvestorProfile?
+  watchlists           Watchlist[]
+  analyses             Analysis[]
+  alerts               Alert[]
+  sessions             Session[]
+  accounts             Account[]
+  portfolio            Portfolio?
+  subscriptionEvents   SubscriptionEvent[]
 
   @@map("users")
+}
+
+model SubscriptionEvent {
+  id              String              @id @default(cuid())
+  userId          String
+  event           String              // e.g. "subscription.activated", "payment.captured"
+  razorpayEventId String?             @unique
+  plan            Plan
+  amount          Int?                // paise
+  status          SubscriptionStatus
+  payload         String              @db.Text   // raw webhook JSON
+  createdAt       DateTime            @default(now())
+
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("subscription_events")
 }
 
 model InvestorProfile {
@@ -36,18 +60,13 @@ model InvestorProfile {
   age                Int
   monthlyIncome      Float
   experience         InvestmentExperience
-  // Risk profile quiz output
-  riskScore          Int?                 // 10–50 raw quiz score
+  riskScore          Int?
   riskTolerance      RiskTolerance        @default(MODERATE)
-  // Investment goals (multi-select)
   investmentGoals    String[]
-  // Sector preferences (multi-select)
   sectorPreferences  String[]
-  // SIP & lump sum
-  sipBudget          Float?               // monthly SIP in INR
+  sipBudget          Float?
   hasLumpSum         Boolean              @default(false)
   lumpSumAmount      Float?
-  // Horizon
   investmentHorizon  InvestmentHorizon?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -155,13 +174,10 @@ model Holding {
 model Analysis {
   id              String       @id @default(cuid())
   userId          String
-  // Personalised portfolio analysis (type = AI_SUMMARY) uses symbol = "PORTFOLIO"
   symbol          String       @default("PORTFOLIO")
   exchange        Exchange     @default(NSE)
   type            AnalysisType
-  // JSON-stringified array of Recommendation objects
   recommendations String       @db.Text
-  // Snapshot of the profile state used to generate this analysis
   profileSnapshot String       @db.Text
   createdAt       DateTime     @default(now())
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -188,10 +204,28 @@ model Alert {
   @@map("alerts")
 }
 
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
 enum Plan {
   FREE
   PRO
   ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  CREATED
+  AUTHENTICATED
+  ACTIVE
+  PENDING
+  HALTED
+  CANCELLED
+  COMPLETED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
 }
 
 enum Exchange {

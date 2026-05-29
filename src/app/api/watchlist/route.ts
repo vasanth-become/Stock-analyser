@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { hasHitWatchlistLimit } from '@/lib/subscription'
 import { z } from 'zod'
 
 const addSchema = z.object({
@@ -40,6 +41,18 @@ export async function POST(req: NextRequest) {
 
   const { symbol, exchange, watchlistName } = parsed.data
   const userId = session.user.id
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { plan: true, planExpiresAt: true },
+  })
+
+  if (user && await hasHitWatchlistLimit(userId, user.plan)) {
+    return NextResponse.json(
+      { error: 'Watchlist limit reached. Upgrade to Pro for unlimited stocks.' },
+      { status: 429 },
+    )
+  }
 
   // Upsert the default watchlist
   let watchlist = await prisma.watchlist.findFirst({

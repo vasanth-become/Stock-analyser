@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { hasHitAlertLimit } from '@/lib/subscription'
 import { z } from 'zod'
-
-const FREE_ALERT_LIMIT = 5
 
 const createSchema = z.object({
   symbol: z.string().min(1).max(30).toUpperCase(),
@@ -47,16 +46,16 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = session.user.id
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } })
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { plan: true, planExpiresAt: true },
+  })
 
-  if (user?.plan === 'FREE') {
-    const count = await prisma.alert.count({ where: { userId, active: true } })
-    if (count >= FREE_ALERT_LIMIT) {
-      return NextResponse.json(
-        { error: `Free plan allows up to ${FREE_ALERT_LIMIT} active alerts. Upgrade to Pro for unlimited.` },
-        { status: 429 },
-      )
-    }
+  if (user && await hasHitAlertLimit(userId, user.plan)) {
+    return NextResponse.json(
+      { error: 'Alert limit reached. Upgrade to Pro for up to 20 active alerts.' },
+      { status: 429 },
+    )
   }
 
   const alert = await prisma.alert.create({
