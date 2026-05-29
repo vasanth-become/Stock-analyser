@@ -78,8 +78,8 @@ export async function createRazorpayCustomer(
   name: string,
 ): Promise<string> {
   const rp = getRazorpay()
-  const customer = await rp.customers.create({ email, name, fail_existing: '0' })
-  return (customer as { id: string }).id
+  const customer = await rp.customers.create({ email, name, fail_existing: 0 })
+  return (customer as unknown as { id: string }).id
 }
 
 // ─── Subscription helpers ─────────────────────────────────────────────────────
