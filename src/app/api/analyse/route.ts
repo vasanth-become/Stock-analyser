@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { runAnalysis } from '@/lib/analysisEngine'
-import { getSectorPerformance, getTopGainersLosers, getStockFundamentals } from '@/lib/marketData'
+import { getSectorPerformance, getTopGainersLosers, getIndexQuotes, getStockFundamentals } from '@/lib/marketData'
 
 const FREE_DAILY_LIMIT = 3
 
@@ -45,15 +45,22 @@ export async function POST(req: NextRequest) {
   }
 
   // Fetch live market context
-  const [sectors, { gainers, losers }] = await Promise.all([
+  const [sectors, { gainers, losers }, indices] = await Promise.all([
     getSectorPerformance(),
     getTopGainersLosers(),
+    getIndexQuotes(),
   ])
 
-  // Run Claude analysis
+  // Run ARIA analysis
   let result
   try {
-    result = await runAnalysis(profile, sectors, gainers, losers)
+    result = await runAnalysis(profile, sectors, gainers, losers, {
+      date: new Date().toISOString().slice(0, 10),
+      indices,
+      sectors,
+      topGainers: gainers,
+      topLosers: losers,
+    })
   } catch (err) {
     console.error('Claude analysis error:', err)
     return NextResponse.json({ error: 'AI analysis failed. Please try again.' }, { status: 500 })
@@ -104,9 +111,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     id: analysis.id,
     createdAt: analysis.createdAt,
-    summary: finalResult.summary,
-    marketOutlook: finalResult.marketOutlook,
+    marketSummary: finalResult.marketSummary,
+    profileSummary: finalResult.profileSummary,
+    budgetAllocation: finalResult.budgetAllocation,
     recommendations: finalResult.recommendations,
+    disclaimer: finalResult.disclaimer,
   })
 }
 
