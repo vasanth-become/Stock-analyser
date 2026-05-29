@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, TrendingUp, BookOpen, BriefcaseBusiness,
-  Bell, Search, Settings, HelpCircle, BarChart2, Star
+  Bell, Search, Settings, HelpCircle, BarChart2, Star, PiggyBank,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/alerts', label: 'Alerts', icon: Bell },
   { href: '/analysis', label: 'AI Analysis', icon: BarChart2 },
   { href: '/recommendations', label: 'Recommendations', icon: Star },
+  { href: '/sip-planner', label: 'SIP Planner', icon: PiggyBank },
 ]
 
 const bottomItems = [
