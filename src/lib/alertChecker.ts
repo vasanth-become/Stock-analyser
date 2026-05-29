@@ -80,18 +80,24 @@ export async function checkAlerts(): Promise<void> {
   }
 }
 
-// ─── Weekly digest ────────────────────────────────────────────────────────────
+// ─── Weekly digest (MERCURY engine) ──────────────────────────────────────────
 
 export async function sendWeeklyDigests(): Promise<void> {
-  const Anthropic = (await import('@anthropic-ai/sdk')).default
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const { runDigestAnalysis } = await import('./digestEngine')
+  const { sendMercuryDigestEmail } = await import('./email')
 
-  // Get all users who have a watchlist and an investor profile
+  // Get all onboarded users with profile, watchlist, and holdings
   const users = await prisma.user.findMany({
     where: { onboarded: true },
     include: {
       profile: true,
       watchlists: { include: { stocks: { take: 10 } } },
+      analyses: {
+        where: { type: 'AI_SUMMARY' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { recommendations: true, createdAt: true },
+      },
     },
   })
 
@@ -103,65 +109,124 @@ export async function sendWeeklyDigests(): Promise<void> {
     d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   const weekRange = `${fmt(weekStart)} – ${fmt(now)}`
 
-  // Fetch index performance (best-effort)
-  let indexSummary: { name: string; changePercent: number }[] = []
+  // Fetch market context (best-effort)
+  let niftyData = { openMonday: 24000, closeFriday: 24000, weeklyChange: 0, high: 24100, low: 23900 }
+  let sensexData = { closeFriday: 79000, weeklyChange: 0 }
+  let sectorPerf: Record<string, number> = {}
+  let topGainer = { name: 'N/A', ticker: 'N/A', change: 0 }
+  let topLoser = { name: 'N/A', ticker: 'N/A', change: 0 }
+
   try {
-    const { getIndexQuotes } = await import('./marketData')
-    const indices = await getIndexQuotes()
-    indexSummary = indices.slice(0, 4).map((idx) => ({
-      name: idx.name,
-      changePercent: idx.changePercent,
-    }))
-  } catch { /* skip */ }
+    const { getIndexQuotes, getSectorPerformance, getTopGainersLosers } = await import('./marketData')
+    const [indices, sectors, { gainers, losers }] = await Promise.all([
+      getIndexQuotes(),
+      getSectorPerformance(),
+      getTopGainersLosers(),
+    ])
+
+    const nifty = indices.find((i) => i.symbol === '^NSEI') ?? indices[0]
+    const sensex = indices.find((i) => i.symbol === '^BSESN')
+    if (nifty) {
+      niftyData = {
+        openMonday: Math.round(nifty.value / (1 + nifty.changePercent / 100)),
+        closeFriday: nifty.value,
+        weeklyChange: nifty.changePercent,
+        high: Math.round(nifty.value * 1.005),
+        low: Math.round(nifty.value * 0.995),
+      }
+    }
+    if (sensex) sensexData = { closeFriday: sensex.value, weeklyChange: sensex.changePercent }
+
+    for (const s of sectors) sectorPerf[s.sector] = s.changePercent
+
+    if (gainers[0]) topGainer = { name: gainers[0].companyName, ticker: gainers[0].symbol, change: gainers[0].changePercent }
+    if (losers[0]) topLoser = { name: losers[0].companyName, ticker: losers[0].symbol, change: losers[0].changePercent }
+  } catch { /* use fallback values */ }
+
+  const mood = niftyData.weeklyChange > 0.5 ? 'Bullish' : niftyData.weeklyChange < -0.5 ? 'Bearish' : 'Neutral'
 
   for (const user of users) {
-    if (!user.email) continue
+    if (!user.email || !user.profile) continue
 
-    // Collect watchlist symbols
+    const profile = user.profile
+    const riskLabel = (profile.riskScore ?? 0) <= 24 ? 'Conservative'
+      : (profile.riskScore ?? 0) <= 37 ? 'Moderate' : 'Aggressive'
+    const experience = (profile.experience?.toLowerCase() ?? 'intermediate') as 'beginner' | 'intermediate' | 'expert'
+
+    // Collect watchlist symbols and live quotes
     const watchSymbols = user.watchlists.flatMap((wl) =>
       wl.stocks.map((s) => ({ symbol: s.symbol, exchange: s.exchange })),
     ).slice(0, 8)
 
-    // Fetch live quotes for watchlist
-    const watchlistItems: { symbol: string; companyName: string; changePercent: number }[] = []
+    const watchlist: { ticker: string; weeklyChange: number; currentPrice: number }[] = []
     await Promise.allSettled(
       watchSymbols.map(async ({ symbol, exchange }) => {
         try {
           const q = await getStockQuote(symbol, exchange as 'NSE' | 'BSE')
-          watchlistItems.push({ symbol, companyName: q.companyName, changePercent: q.changePercent })
+          watchlist.push({ ticker: symbol, weeklyChange: q.changePercent, currentPrice: q.price })
         } catch { /* skip */ }
       }),
     )
 
-    // Generate AI pick of the week
-    let aiRecommendation = 'Markets continue to present opportunities for disciplined, long-term investors. Stay focused on your asset allocation and SIP commitments.'
-    if (user.profile && process.env.ANTHROPIC_API_KEY) {
+    // Derive last week's pick from most recent analysis (best-effort)
+    let lastWeekRecommendation = null
+    const lastAnalysis = user.analyses?.[0]
+    if (lastAnalysis) {
       try {
-        const riskLabel = (user.profile.riskScore ?? 0) <= 24 ? 'Conservative'
-          : (user.profile.riskScore ?? 0) <= 37 ? 'Moderate' : 'Aggressive'
-        const goals = user.profile.investmentGoals.join(', ') || 'wealth creation'
-        const message = await client.messages.create({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 256,
-          messages: [{
-            role: 'user',
-            content: `You are an Indian market analyst. Write a single paragraph (3–4 sentences, no headers, no bullet points) as an "AI Pick of the Week" for a ${riskLabel} retail investor whose goals are ${goals}. Mention one specific Indian stock or mutual fund category that looks interesting this week and why. Keep it conversational and actionable. End with a note on risk.`,
-          }],
-        })
-        aiRecommendation = (message.content[0] as { type: string; text: string }).text.trim()
-      } catch { /* fallback text already set */ }
+        const recs = JSON.parse(lastAnalysis.recommendations)
+        const featured = Array.isArray(recs) ? recs.find((r: { isFeatured?: boolean; rank?: number }) => r.isFeatured) ?? recs[0] : null
+        if (featured?.ticker) {
+          const q = await getStockQuote(featured.ticker, 'NSE').catch(() => null)
+          if (q) {
+            const recPrice = featured.currentPrice ?? featured.buyZone?.low ?? q.price
+            lastWeekRecommendation = {
+              ticker: featured.ticker,
+              recommendedAt: recPrice,
+              currentPrice: q.price,
+              change: parseFloat(((q.price - recPrice) / recPrice * 100).toFixed(1)),
+            }
+          }
+        }
+      } catch { /* skip */ }
     }
 
-    const { sendDigestEmail } = await import('./email')
-    await sendDigestEmail({
-      to: user.email,
-      name: user.name ?? 'Investor',
-      weekRange,
-      indexSummary,
-      watchlistItems,
-      aiRecommendation,
-    })
+    // Build SIP list from profile
+    const activeSIPs = profile.sipBudget
+      ? [{ fundName: 'Your SIP', monthlySIP: profile.sipBudget }]
+      : []
+
+    try {
+      const output = await runDigestAnalysis({
+        user: {
+          firstName: (user.name ?? 'Investor').split(' ')[0],
+          riskProfile: riskLabel,
+          goal: profile.investmentGoals[0] ?? 'Wealth creation',
+          experience,
+        },
+        weeklyMarketData: {
+          weekRange,
+          nifty50: niftyData,
+          sensex: sensexData,
+          sectorPerformance: sectorPerf,
+          topGainer,
+          topLoser,
+          fiiActivity: { netFlow: 'N/A', stance: mood === 'Bullish' ? 'Buying' : 'Neutral' },
+          diiActivity: { netFlow: 'N/A', stance: 'Neutral' },
+          keyEvents: [],
+        },
+        userPortfolioData: {
+          watchlist,
+          holdings: [],
+          activeSIPs,
+        },
+        lastWeekRecommendation,
+      })
+
+      await sendMercuryDigestEmail(user.email, output)
+    } catch (err) {
+      console.error(`[digest] MERCURY failed for ${user.email}:`, err)
+    }
   }
 
-  console.log(`[digest] Sent weekly digest to ${users.length} user(s).`)
+  console.log(`[digest] MERCURY weekly digest sent to ${users.length} user(s).`)
 }
