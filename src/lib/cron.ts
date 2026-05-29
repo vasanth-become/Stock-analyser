@@ -1,11 +1,11 @@
 /**
- * Market data refresh cron — runs in-process when using a long-running Node.js
- * server (e.g. `next start` or Docker).  For serverless / Vercel deployments
- * use the /api/cron/refresh route with Vercel Cron Jobs instead.
+ * Server-side cron jobs — run in-process on long-running Node.js servers.
+ * For serverless / Vercel deployments use /api/cron/* routes instead.
  *
- * Schedule: every 15 minutes, Mon–Fri only.
- * The job itself respects market hours (9:15 AM – 3:30 PM IST) and skips
- * runs outside that window to avoid needless API calls.
+ * Jobs:
+ *  1. Market data cache refresh  — every 15 min, Mon–Fri, during market hours
+ *  2. Price alert checker        — every 15 min, Mon–Fri, during market hours
+ *  3. Weekly market digest email — Monday 08:00 IST (02:30 UTC)
  */
 
 import { cacheInvalidate } from './cache'
@@ -17,9 +17,9 @@ export function initMarketCron(): void {
   if (initialised || process.env.NODE_ENV === 'test') return
   initialised = true
 
-  // Dynamic import keeps node-cron server-side only
   import('node-cron').then(({ default: cron }) => {
-    // Every 15 min, Mon–Fri  (cron doesn't understand IST, so we guard in the job body)
+
+    // ── Job 1: Market data refresh ─────────────────────────────────────────
     cron.schedule('*/15 * * * 1-5', async () => {
       if (!isMarketOpen()) return
       console.log('[cron] Refreshing market data cache…')
@@ -27,7 +27,6 @@ export function initMarketCron(): void {
         cacheInvalidate('indices:')
         cacheInvalidate('sectors:')
         cacheInvalidate('movers:')
-        // Warm the hot paths immediately so the next user request hits cache
         const { getIndexQuotes, getSectorPerformance, getTopGainersLosers } =
           await import('./marketData')
         await Promise.allSettled([
@@ -41,8 +40,31 @@ export function initMarketCron(): void {
       }
     })
 
-    console.log('[cron] Market data scheduler started (every 15 min, Mon–Fri).')
+    // ── Job 2: Price alert checker ─────────────────────────────────────────
+    cron.schedule('*/15 * * * 1-5', async () => {
+      if (!isMarketOpen()) return
+      console.log('[cron] Checking price alerts…')
+      try {
+        const { checkAlerts } = await import('./alertChecker')
+        await checkAlerts()
+      } catch (err) {
+        console.error('[cron] Alert check failed:', err)
+      }
+    })
+
+    // ── Job 3: Weekly digest — Monday 02:30 UTC = 08:00 IST ───────────────
+    cron.schedule('30 2 * * 1', async () => {
+      console.log('[cron] Sending weekly market digest emails…')
+      try {
+        const { sendWeeklyDigests } = await import('./alertChecker')
+        await sendWeeklyDigests()
+      } catch (err) {
+        console.error('[cron] Weekly digest failed:', err)
+      }
+    })
+
+    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest).')
   }).catch((err) => {
-    console.warn('[cron] node-cron unavailable, skipping scheduler:', err.message)
+    console.warn('[cron] node-cron unavailable, skipping schedulers:', err.message)
   })
 }

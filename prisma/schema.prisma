@@ -171,16 +171,20 @@ model Analysis {
 }
 
 model Alert {
-  id        String    @id @default(cuid())
-  userId    String
-  symbol    String
-  exchange  Exchange  @default(NSE)
-  type      AlertType
-  value     Float
-  triggered Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  userId      String
+  symbol      String
+  exchange    Exchange  @default(NSE)
+  type        AlertType
+  value       Float
+  triggered   Boolean   @default(false)
+  triggeredAt DateTime?
+  notifiedAt  DateTime?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([active, triggered])
   @@map("alerts")
 }
 
