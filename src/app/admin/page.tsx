@@ -23,6 +23,13 @@ interface StatsData {
     last14: { date: string; count: number }[]
   }
   topStocks: { symbol: string; count: number }[]
+  apiUsage: {
+    currentMonth: string
+    totalCalls: number
+    estimatedCost: number
+    limit: number
+    history: { month: string; totalCalls: number; estimatedCost: number }[]
+  }
   revenue: {
     mrr: number
     arr: number
@@ -95,7 +102,7 @@ export default function AdminDashboard() {
     )
   }
 
-  const { users, analyses, topStocks, revenue } = data
+  const { users, analyses, topStocks, revenue, apiUsage } = data
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
@@ -155,6 +162,42 @@ export default function AdminDashboard() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+      </section>
+
+      {/* API Usage & Spend */}
+      <section>
+        <SectionTitle>API Usage &amp; Spend</SectionTitle>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <StatCard
+            label="Calls this month"
+            value={apiUsage.totalCalls.toLocaleString()}
+            icon={BarChart2}
+            accent="blue"
+          />
+          <StatCard
+            label="Estimated cost"
+            value={`$${apiUsage.estimatedCost.toFixed(2)}`}
+            sub={`of $${apiUsage.limit} limit`}
+            icon={Zap}
+            accent={apiUsage.estimatedCost >= apiUsage.limit * 0.8 ? 'orange' : 'green'}
+          />
+        </div>
+        {apiUsage.history.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <p className="text-sm font-medium text-gray-600 mb-4">Monthly API calls (last 6 months)</p>
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={apiUsage.history} margin={{ top: 0, right: 8, bottom: 0, left: -16 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                />
+                <Bar dataKey="totalCalls" fill="#6366f1" radius={[4, 4, 0, 0]} name="API Calls" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </section>
 
       {/* Top stocks + Revenue grid */}

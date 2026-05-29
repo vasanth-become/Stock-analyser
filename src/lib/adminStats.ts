@@ -168,6 +168,33 @@ export async function getRevenueMetrics() {
   }
 }
 
+// ─── API Usage metrics ────────────────────────────────────────────────────────
+
+export async function getApiUsageMetrics() {
+  const limit = parseFloat(process.env.MONTHLY_SPEND_LIMIT ?? '50')
+  const currentMonth = new Date().toISOString().slice(0, 7)
+
+  const [current, history] = await Promise.all([
+    prisma.monthlyApiUsage.findUnique({ where: { month: currentMonth } }),
+    prisma.monthlyApiUsage.findMany({
+      orderBy: { month: 'desc' },
+      take: 6,
+    }),
+  ])
+
+  return {
+    currentMonth,
+    totalCalls: current?.totalCalls ?? 0,
+    estimatedCost: current?.estimatedCost ?? 0,
+    limit,
+    history: history.map((h) => ({
+      month: h.month,
+      totalCalls: h.totalCalls,
+      estimatedCost: h.estimatedCost,
+    })),
+  }
+}
+
 // ─── User list (paginated) ────────────────────────────────────────────────────
 
 export async function listUsers(page = 1, pageSize = 20, search = '') {

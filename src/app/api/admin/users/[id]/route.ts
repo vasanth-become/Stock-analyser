@@ -56,6 +56,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     select: { id: true, email: true, name: true, plan: true, role: true, planExpiresAt: true },
   })
 
+  // Audit log
+  const session = await auth()
+  await prisma.adminLog.create({
+    data: {
+      action: parsed.data.plan ? `set_plan_${parsed.data.plan}` : `set_role_${parsed.data.role}`,
+      targetEmail: existing.email,
+      performedBy: session?.user?.email ?? 'admin',
+    },
+  }).catch(() => {})
+
   return NextResponse.json(updated)
 }
 

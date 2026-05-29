@@ -3,8 +3,8 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { runAnalysis } from '@/lib/analysisEngine'
 import { getSectorPerformance, getTopGainersLosers, getIndexQuotes, getStockFundamentals } from '@/lib/marketData'
-
-const FREE_DAILY_LIMIT = 3
+import { canRunAnalysis, incrementAnalysisCount } from '@/lib/middleware/roleCheck'
+import { checkSpendLimit } from '@/lib/spendGuard'
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -14,25 +14,25 @@ export async function POST(req: NextRequest) {
 
   const userId = session.user.id
 
-  // Rate limit: count analyses created today (UTC midnight boundary)
-  const todayStart = new Date()
-  todayStart.setUTCHours(0, 0, 0, 0)
+  // Role-aware rate limit
+  const { allowed, reason, remainingToday } = await canRunAnalysis(userId)
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Daily limit reached', reason, upgradeUrl: '/pricing' },
+      { status: 429 },
+    )
+  }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { plan: true },
-  })
-
-  if (user?.plan === 'FREE') {
-    const count = await prisma.analysis.count({
-      where: { userId, createdAt: { gte: todayStart } },
-    })
-    if (count >= FREE_DAILY_LIMIT) {
-      return NextResponse.json(
-        { error: 'Daily limit reached. Upgrade to Pro for unlimited analyses.' },
-        { status: 429 },
-      )
-    }
+  // API spend guard
+  const spendCheck = await checkSpendLimit()
+  if (!spendCheck.safe) {
+    return NextResponse.json(
+      {
+        error: 'Service temporarily limited',
+        message: 'Monthly analysis limit reached. Resets on the 1st. Contact support.',
+      },
+      { status: 503 },
+    )
   }
 
   // Fetch investor profile
@@ -71,12 +71,7 @@ export async function POST(req: NextRequest) {
     result.recommendations.map(async (rec) => {
       try {
         const fund = await getStockFundamentals(rec.ticker)
-        return {
-          ...rec,
-          currentPrice: undefined,
-          pe: rec.pe ?? fund.pe,
-          liveMarketCap: fund.marketCap,
-        }
+        return { ...rec, pe: rec.pe ?? fund.pe, liveMarketCap: fund.marketCap }
       } catch {
         return rec
       }
@@ -108,6 +103,11 @@ export async function POST(req: NextRequest) {
     },
   })
 
+  // Track usage AFTER successful analysis
+  await incrementAnalysisCount(userId)
+
+  const newRemaining = remainingToday === 999 ? 999 : Math.max(0, remainingToday - 1)
+
   return NextResponse.json({
     id: analysis.id,
     createdAt: analysis.createdAt,
@@ -116,6 +116,7 @@ export async function POST(req: NextRequest) {
     budgetAllocation: finalResult.budgetAllocation,
     recommendations: finalResult.recommendations,
     disclaimer: finalResult.disclaimer,
+    remainingToday: newRemaining,
   })
 }
 

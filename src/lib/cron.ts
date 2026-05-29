@@ -63,7 +63,18 @@ export function initMarketCron(): void {
       }
     })
 
-    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest).')
+    // ── Job 4: Monthly usage reset — midnight on the 1st of every month ──────
+    cron.schedule('0 0 1 * *', async () => {
+      console.log('[cron] Running monthly usage reset…')
+      try {
+        const { resetMonthlyUsage } = await import('./cron/resetMonthlyUsage')
+        await resetMonthlyUsage()
+      } catch (err) {
+        console.error('[cron] Monthly usage reset failed:', err)
+      }
+    })
+
+    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest, monthly reset).')
   }).catch((err) => {
     console.warn('[cron] node-cron unavailable, skipping schedulers:', err.message)
   })

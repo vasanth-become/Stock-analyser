@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { getUserMetrics, getAnalysisMetrics, getTopRecommendedStocks, getRevenueMetrics } from '@/lib/adminStats'
+import { getUserMetrics, getAnalysisMetrics, getTopRecommendedStocks, getRevenueMetrics, getApiUsageMetrics } from '@/lib/adminStats'
 
 async function requireAdmin() {
   const session = await auth()
@@ -14,12 +14,13 @@ export async function GET() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const [users, analyses, topStocks, revenue] = await Promise.all([
+  const [users, analyses, topStocks, revenue, apiUsage] = await Promise.all([
     getUserMetrics(),
     getAnalysisMetrics(),
     getTopRecommendedStocks(),
     getRevenueMetrics(),
+    getApiUsageMetrics(),
   ])
 
-  return NextResponse.json({ users, analyses, topStocks, revenue })
+  return NextResponse.json({ users, analyses, topStocks, revenue, apiUsage })
 }

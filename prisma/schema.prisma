@@ -22,6 +22,10 @@ model User {
   subscriptionStatus   SubscriptionStatus?
   planExpiresAt        DateTime?
   billingCycle         BillingCycle?
+  monthlyAnalysisCount Int              @default(0)
+  lastAnalysisReset    DateTime         @default(now())
+  digestEnabled        Boolean          @default(false)
+  isTestAccount        Boolean          @default(false)
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
@@ -203,6 +207,26 @@ model Alert {
 
   @@index([active, triggered])
   @@map("alerts")
+}
+
+model MonthlyApiUsage {
+  id            String   @id @default(cuid())
+  month         String   @unique  // format: "2025-06"
+  totalCalls    Int      @default(0)
+  estimatedCost Float    @default(0)
+  lastUpdated   DateTime @default(now()) @updatedAt
+
+  @@map("monthly_api_usage")
+}
+
+model AdminLog {
+  id           String   @id @default(cuid())
+  action       String
+  targetEmail  String?
+  performedBy  String
+  createdAt    DateTime @default(now())
+
+  @@map("admin_logs")
 }
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
