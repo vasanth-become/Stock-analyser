@@ -1,0 +1,105 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# StockAnalyser — local development stack
+#   docker compose up --build
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Next.js application ────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder      # Use builder stage for dev (hot reload via volumes)
+    command: npm run dev
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/stockanalyser
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: '1'
+    env_file:
+      - .env.local          # Mount your real secrets here (never commit this file)
+    volumes:
+      - .:/app
+      - /app/node_modules   # Don't overwrite node_modules from the image
+      - /app/.next          # Don't overwrite the build output
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - stocknet
+
+  # ── PostgreSQL 16 ──────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: stockanalyser
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d stockanalyser']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - stocknet
+
+  # ── Redis 7 (session cache + optional rate-limit fallback) ─────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - stocknet
+
+  # ── Prisma Studio (dev only — browse your DB at http://localhost:5555) ──────
+  prisma-studio:
+    image: node:20-alpine
+    working_dir: /app
+    command: npx prisma studio
+    ports:
+      - '5555:5555'
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/stockanalyser
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - tools               # Only starts with: docker compose --profile tools up
+    networks:
+      - stocknet
+
+# ─────────────────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  stocknet:
+    driver: bridge

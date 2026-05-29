@@ -1,17 +1,71 @@
+import { withSentryConfig } from '@sentry/nextjs'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable server instrumentation (used for cron job initialisation)
+  // Standalone output creates a self-contained server bundle — required for Docker
+  output: 'standalone',
+
+  // Enable server instrumentation (cron init + Sentry + env validation)
   experimental: {
     instrumentationHook: true,
   },
+
   images: {
     domains: ['avatars.githubusercontent.com'],
   },
+
   // Suppress yahoo-finance2 punycode deprecation warning
   webpack(config) {
     config.ignoreWarnings = [{ module: /node_modules\/punycode/ }]
     return config
   },
+
+  // Security headers applied to every response
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-DNS-Prefetch-Control', value: 'off' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+        ],
+      },
+      {
+        // Allow Razorpay checkout iframe on payment pages
+        source: '/pricing',
+        headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
+      },
+    ]
+  },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  // Suppress the Sentry CLI output during builds (set to false to debug)
+  silent: true,
+
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Upload wider set of source maps for better stack traces
+  widenClientFileUpload: true,
+
+  // Hide source maps from the client bundle
+  hideSourceMaps: true,
+
+  // Suppress Sentry SDK logger calls in production bundles
+  disableLogger: true,
+
+  // Don't create Vercel cron monitors automatically (we define them manually)
+  automaticVercelMonitors: false,
+})

@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit, limiterKeyForPath } from '@/lib/rateLimit'
 
 // Pro-only dashboard sub-routes — free users are redirected to /pricing
 const PRO_ROUTES: Record<string, string> = {
@@ -7,17 +8,43 @@ const PRO_ROUTES: Record<string, string> = {
   '/billing': 'billing',
 }
 
-export default auth((req) => {
+export default auth(async (req) => {
   const { nextUrl, auth: session } = req
+  const pathname = nextUrl.pathname
+
+  // ── Rate limit all /api/* routes ────────────────────────────────────────────
+  if (pathname.startsWith('/api/') && pathname !== '/api/health') {
+    const ip =
+      (req as NextRequest).headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+      (req as NextRequest).headers.get('x-real-ip') ??
+      '127.0.0.1'
+
+    const key = limiterKeyForPath(pathname)
+    const { limited, headers } = await checkRateLimit(`${ip}:${key}`, key)
+
+    if (limited) {
+      return NextResponse.json(
+        { error: 'Too many requests', message: 'Rate limit exceeded. Please slow down.' },
+        { status: 429, headers },
+      )
+    }
+
+    // Add rate-limit headers on successful API responses too
+    const res = NextResponse.next()
+    Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v))
+    return res
+  }
+
+  // ── Auth / routing checks for page routes ───────────────────────────────────
   const isLoggedIn = !!session?.user
   const isOnboarded = session?.user?.onboarded ?? false
   const plan = session?.user?.plan ?? 'FREE'
   const role = session?.user?.role ?? 'USER'
 
-  const isDashboard = nextUrl.pathname.startsWith('/dashboard')
-  const isOnboarding = nextUrl.pathname.startsWith('/onboarding')
-  const isAuthPage = nextUrl.pathname === '/login' || nextUrl.pathname === '/register'
-  const isAdmin = nextUrl.pathname.startsWith('/admin')
+  const isDashboard = pathname.startsWith('/dashboard')
+  const isOnboarding = pathname.startsWith('/onboarding')
+  const isAuthPage = pathname === '/login' || pathname === '/register'
+  const isAdmin = pathname.startsWith('/admin')
 
   if (isAdmin) {
     if (!isLoggedIn) return NextResponse.redirect(new URL('/login', nextUrl))
@@ -44,7 +71,7 @@ export default auth((req) => {
 
   // Gate Pro-only dashboard routes for free-tier users
   if (isDashboard && isLoggedIn && plan === 'FREE') {
-    const dashPath = nextUrl.pathname.replace('/dashboard', '') || '/'
+    const dashPath = pathname.replace('/dashboard', '') || '/'
     const matched = Object.entries(PRO_ROUTES).find(([route]) =>
       dashPath === route || dashPath.startsWith(route + '/'),
     )
@@ -59,5 +86,12 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/onboarding/:path*', '/login', '/register', '/admin/:path*'],
+  matcher: [
+    '/api/:path*',
+    '/dashboard/:path*',
+    '/onboarding/:path*',
+    '/login',
+    '/register',
+    '/admin/:path*',
+  ],
 }

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "regions": ["sin1"],
+
+  "buildCommand": "npx prisma generate && npm run build",
+  "installCommand": "npm ci",
+
+  "crons": [
+    { "path": "/api/cron/refresh",     "schedule": "*/15 3-11 * * 1-5" },
+    { "path": "/api/cron/alerts",      "schedule": "*/15 3-11 * * 1-5" },
+    { "path": "/api/cron/digest",      "schedule": "30 2 * * 1"         },
+    { "path": "/api/cron/reset-usage", "schedule": "0 0 1 * *"          }
+  ],
+
+  "functions": {
+    "src/app/api/analyse/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "src/app/api/sip/recommend/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "src/app/api/admin/broadcast/route.ts": {
+      "memory": 512,
+      "maxDuration": 300
+    },
+    "src/app/api/webhooks/razorpay/route.ts": {
+      "memory": 256,
+      "maxDuration": 10
+    }
+  },
+
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin",  "value": "https://stockanalyser.app" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PATCH,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type,Authorization" }
+      ]
+    }
+  ]
+}
