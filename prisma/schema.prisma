@@ -29,18 +29,29 @@ model User {
 }
 
 model InvestorProfile {
-  id               String             @id @default(cuid())
-  userId           String             @unique
-  displayName      String
-  age              Int
-  monthlyIncome    Float
-  experience       InvestmentExperience
-  riskTolerance    RiskTolerance      @default(MODERATE)
-  investmentGoals  String[]
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  id                 String               @id @default(cuid())
+  userId             String               @unique
+  displayName        String
+  age                Int
+  monthlyIncome      Float
+  experience         InvestmentExperience
+  // Risk profile quiz output
+  riskScore          Int?                 // 10–50 raw quiz score
+  riskTolerance      RiskTolerance        @default(MODERATE)
+  // Investment goals (multi-select)
+  investmentGoals    String[]
+  // Sector preferences (multi-select)
+  sectorPreferences  String[]
+  // SIP & lump sum
+  sipBudget          Float?               // monthly SIP in INR
+  hasLumpSum         Boolean              @default(false)
+  lumpSumAmount      Float?
+  // Horizon
+  investmentHorizon  InvestmentHorizon?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
-  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("investor_profiles")
 }
@@ -156,6 +167,12 @@ enum RiskTolerance {
   CONSERVATIVE
   MODERATE
   AGGRESSIVE
+}
+
+enum InvestmentHorizon {
+  SHORT_TERM
+  MEDIUM_TERM
+  LONG_TERM
 }
 
 enum AnalysisType {

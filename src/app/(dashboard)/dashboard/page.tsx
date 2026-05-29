@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ProfileSummaryCard } from '@/components/dashboard/ProfileSummaryCard'
 
 const marketIndices = [
   { name: 'NIFTY 50', value: '22,456.80', change: '+234.50', pct: '+1.05%', up: true },
@@ -65,8 +66,11 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
+        {/* Investor Profile Summary */}
+        <ProfileSummaryCard profile={profile} />
+
         {/* Portfolio Summary */}
-        <Card className="lg:col-span-1">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IndianRupee className="h-5 w-5 text-blue-600" />
