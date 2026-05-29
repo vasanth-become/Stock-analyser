@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 const marketIndices = [
   { name: 'NIFTY 50', value: '22,456.80', change: '+234.50', pct: '+1.05%', up: true },
@@ -23,13 +25,19 @@ const topLosers = [
   { symbol: 'ONGC', name: 'ONGC', price: '198.45', change: '-1.54%' },
 ]
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const session = await auth()
+  const profile = session?.user?.id
+    ? await prisma.investorProfile.findUnique({ where: { userId: session.user.id } })
+    : null
+  const greeting = profile?.displayName || session?.user?.name?.split(' ')[0] || 'Investor'
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">Welcome back! Here&apos;s your market overview.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Good morning, {greeting} 👋</h1>
+          <p className="text-gray-500 text-sm mt-1">Here&apos;s your personalised market overview.</p>
         </div>
         <Link href="/analysis">
           <Button className="gap-2">
