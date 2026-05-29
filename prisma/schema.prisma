@@ -120,15 +120,20 @@ model WatchlistStock {
 }
 
 model Analysis {
-  id        String       @id @default(cuid())
-  userId    String
-  symbol    String
-  exchange  Exchange     @default(NSE)
-  type      AnalysisType
-  content   String       @db.Text
-  createdAt DateTime     @default(now())
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String       @id @default(cuid())
+  userId          String
+  // Personalised portfolio analysis (type = AI_SUMMARY) uses symbol = "PORTFOLIO"
+  symbol          String       @default("PORTFOLIO")
+  exchange        Exchange     @default(NSE)
+  type            AnalysisType
+  // JSON-stringified array of Recommendation objects
+  recommendations String       @db.Text
+  // Snapshot of the profile state used to generate this analysis
+  profileSnapshot String       @db.Text
+  createdAt       DateTime     @default(now())
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
   @@map("analyses")
 }
 
