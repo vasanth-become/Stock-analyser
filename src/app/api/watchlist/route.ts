@@ -64,6 +64,38 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// PATCH /api/watchlist — update notes for a watchlist stock
+export async function PATCH(req: NextRequest) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const body = await req.json().catch(() => ({}))
+  const parsed = z.object({
+    watchlistStockId: z.string(),
+    notes: z.string().max(1000),
+  }).safeParse(body)
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 })
+  }
+
+  const { watchlistStockId, notes } = parsed.data
+
+  // Verify ownership via join
+  const stock = await prisma.watchlistStock.findFirst({
+    where: { id: watchlistStockId, watchlist: { userId: session.user.id } },
+  })
+  if (!stock) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const updated = await prisma.watchlistStock.update({
+    where: { id: watchlistStockId },
+    data: { notes },
+  })
+  return NextResponse.json(updated)
+}
+
 // DELETE /api/watchlist?symbol=X&watchlistId=Y
 export async function DELETE(req: NextRequest) {
   const session = await auth()
