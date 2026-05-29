@@ -1,13 +1,183 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  plan          Plan      @default(FREE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  watchlists    Watchlist[]
+  portfolios    Portfolio[]
+  analyses      Analysis[]
+  alerts        Alert[]
+  sessions      Session[]
+  accounts      Account[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Watchlist {
+  id        String          @id @default(cuid())
+  name      String
+  userId    String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stocks    WatchlistStock[]
+
+  @@map("watchlists")
+}
+
+model WatchlistStock {
+  id          String    @id @default(cuid())
+  watchlistId String
+  symbol      String
+  exchange    Exchange  @default(NSE)
+  addedAt     DateTime  @default(now())
+  watchlist   Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+
+  @@unique([watchlistId, symbol])
+  @@map("watchlist_stocks")
+}
+
+model Portfolio {
+  id        String          @id @default(cuid())
+  name      String
+  userId    String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings  PortfolioHolding[]
+  transactions Transaction[]
+
+  @@map("portfolios")
+}
+
+model PortfolioHolding {
+  id          String    @id @default(cuid())
+  portfolioId String
+  symbol      String
+  exchange    Exchange  @default(NSE)
+  quantity    Float
+  avgPrice    Float
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, symbol])
+  @@map("portfolio_holdings")
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  portfolioId String
+  symbol      String
+  exchange    Exchange        @default(NSE)
+  type        TransactionType
+  quantity    Float
+  price       Float
+  date        DateTime
+  notes       String?
+  createdAt   DateTime        @default(now())
+  portfolio   Portfolio       @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model Analysis {
+  id        String       @id @default(cuid())
+  userId    String
+  symbol    String
+  exchange  Exchange     @default(NSE)
+  type      AnalysisType
+  content   String       @db.Text
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("analyses")
+}
+
+model Alert {
+  id        String      @id @default(cuid())
+  userId    String
+  symbol    String
+  exchange  Exchange    @default(NSE)
+  type      AlertType
+  condition String
+  value     Float
+  triggered Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("alerts")
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum Exchange {
+  NSE
+  BSE
+}
+
+enum TransactionType {
+  BUY
+  SELL
+}
+
+enum AnalysisType {
+  TECHNICAL
+  FUNDAMENTAL
+  AI_SUMMARY
+  SENTIMENT
+}
+
+enum AlertType {
+  PRICE_ABOVE
+  PRICE_BELOW
+  PERCENT_CHANGE
+  VOLUME_SPIKE
 }
