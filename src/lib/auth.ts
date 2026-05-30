@@ -1,10 +1,10 @@
 import NextAuth from 'next-auth'
-import Google from 'next-auth/providers/google'
 import Credentials from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
+import { authConfig } from './auth.config'
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -12,12 +12,14 @@ const credentialsSchema = z.object({
 })
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: 'jwt' },
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    // Re-declare all providers with full Node.js implementations
+    ...authConfig.providers.filter((p) => {
+      // Keep Google; replace Credentials stub with the full version below
+      const id = typeof p === 'function' ? undefined : (p as { id?: string }).id
+      return id !== 'credentials'
     }),
     Credentials({
       async authorize(credentials) {
@@ -53,7 +55,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.plan = (user as { plan?: string }).plan ?? 'FREE'
         token.role = (user as { role?: string }).role ?? 'USER'
       }
-      // Allow client-side session update to refresh onboarded flag
       if (trigger === 'update' && session?.onboarded !== undefined) {
         token.onboarded = session.onboarded
       }
@@ -79,15 +80,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session
     },
   },
-  pages: {
-    signIn: '/login',
-    error: '/login',
-    newUser: '/onboarding',
-  },
   events: {
     async createUser({ user }) {
-      // New Google OAuth users land on /onboarding via newUser page
-      // Credentials users are handled post-register
       void user
     },
   },

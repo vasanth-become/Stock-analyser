@@ -1,6 +1,10 @@
-import { auth } from '@/lib/auth'
+import NextAuth from 'next-auth'
+import { authConfig } from '@/lib/auth.config'
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit, limiterKeyForPath } from '@/lib/rateLimit'
+
+// Use the edge-safe auth config — no Prisma, no bcrypt, runs in Edge runtime
+const { auth } = NextAuth(authConfig)
 
 // Pro-only dashboard sub-routes — free users are redirected to /pricing
 const PRO_ROUTES: Record<string, string> = {
