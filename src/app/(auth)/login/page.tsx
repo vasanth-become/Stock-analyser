@@ -74,7 +74,7 @@ function LoginForm() {
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-200">
               <TrendingUp className="h-8 w-8 text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">StockSage India</span>
+            <span className="text-2xl font-bold text-gray-900">ARIA Research</span>
           </Link>
           <p className="text-gray-500 mt-1 text-sm">AI-powered stock market insights</p>
         </div>

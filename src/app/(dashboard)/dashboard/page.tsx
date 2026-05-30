@@ -38,12 +38,12 @@ export default async function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Good morning, {greeting} 👋</h1>
-          <p className="text-gray-500 text-sm mt-1">Here&apos;s your personalised market overview.</p>
+          <p className="text-gray-500 text-sm mt-1">Here is your personalised research for today.</p>
         </div>
         <Link href="/analysis">
           <Button className="gap-2">
             <Sparkles className="h-4 w-4" />
-            AI Analysis
+            Run AI Research
           </Button>
         </Link>
       </div>
@@ -74,9 +74,9 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IndianRupee className="h-5 w-5 text-blue-600" />
-              Portfolio
+              Portfolio Tracker
             </CardTitle>
-            <CardDescription>Your investment summary</CardDescription>
+            <CardDescription>Your holdings summary — tracking tool only</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -97,8 +97,9 @@ export default async function DashboardPage() {
               <p className="text-xs text-gray-500">Today&apos;s Change</p>
               <p className="font-semibold text-green-600">+₹3,421 (+0.71%)</p>
             </div>
+            <p className="text-[10px] text-gray-400">P&L based on manually entered prices and live data. ARIA Research does not execute trades.</p>
             <Link href="/portfolio">
-              <Button variant="outline" className="w-full mt-2">View Portfolio</Button>
+              <Button variant="outline" className="w-full mt-2">View Portfolio Tracker</Button>
             </Link>
           </CardContent>
         </Card>
@@ -174,9 +175,9 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { href: '/search', label: 'Search Stocks', icon: '🔍' },
-              { href: '/analysis', label: 'AI Analysis', icon: '🤖' },
-              { href: '/portfolio', label: 'Add Holdings', icon: '📊' },
-              { href: '/alerts', label: 'Set Alert', icon: '🔔' },
+              { href: '/analysis', label: 'Run AI Research', icon: '🤖' },
+              { href: '/portfolio', label: 'Update Holdings', icon: '📊' },
+              { href: '/alerts', label: 'Set Price Alert', icon: '🔔' },
             ].map(({ href, label, icon }) => (
               <Link key={href} href={href}>
                 <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer">
@@ -189,7 +190,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* AI Insights Banner */}
+      {/* AI Research Banner */}
       <Card className="bg-gradient-to-r from-blue-600 to-indigo-700 border-0">
         <CardContent className="p-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -198,13 +199,13 @@ export default async function DashboardPage() {
                 <BarChart2 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="font-semibold text-white text-lg">Get AI-powered stock insights</p>
-                <p className="text-blue-100 text-sm">Analyse any NSE/BSE stock with Claude AI in seconds</p>
+                <p className="font-semibold text-white text-lg">Get AI-powered research insights</p>
+                <p className="text-blue-100 text-sm">ARIA analyses NSE/BSE market data against your investor profile</p>
               </div>
             </div>
             <Link href="/analysis">
               <Button variant="secondary" className="bg-white text-blue-700 hover:bg-blue-50">
-                Try Now →
+                Run Research →
               </Button>
             </Link>
           </div>

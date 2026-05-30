@@ -7,11 +7,11 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: {
-    default: 'StockSage India - AI-Powered Stock Analysis',
-    template: '%s | StockSage India',
+    default: 'ARIA Research — AI-Powered Investment Research for Indian Investors',
+    template: '%s | ARIA Research',
   },
-  description: 'AI-powered stock market analyser for Indian retail investors. Get personalised insights for NSE and BSE stocks.',
-  keywords: ['stock market', 'NSE', 'BSE', 'India', 'stock analysis', 'AI', 'investment'],
+  description: 'AI-powered investment research platform for Indian investors. Research insights for NSE and BSE stocks. Not SEBI-registered advisory.',
+  keywords: ['stock research', 'NSE', 'BSE', 'India', 'AI research', 'investment research', 'ARIA Research'],
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

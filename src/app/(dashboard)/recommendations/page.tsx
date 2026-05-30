@@ -8,6 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Disclaimer } from '@/components/ui/Disclaimer'
 import { StockCard } from '@/components/recommendations/StockCard'
 import { cn } from '@/lib/utils'
 import type { Recommendation } from '@/lib/analysisEngine'
@@ -32,38 +33,29 @@ function deriveMood(recs: Recommendation[]): { mood: MarketMood; rationale: stri
   if (avgConfidence >= 70 && lowRiskCount >= recs.length * 0.4) {
     return {
       mood: 'Bullish',
-      rationale: `Strong conviction across ${recs.length} picks with avg confidence ${Math.round(avgConfidence)}/100.`,
+      rationale: `Strong research conviction across ${recs.length} picks with avg confidence ${Math.round(avgConfidence)}/100.`,
     }
   }
   if (avgConfidence < 55 || highRiskCount > recs.length * 0.5) {
     return {
       mood: 'Bearish',
-      rationale: `Elevated risk profile in current recommendations. Proceed with caution.`,
+      rationale: `Elevated risk profile in current research output. Proceed with caution.`,
     }
   }
   return {
     mood: 'Neutral',
-    rationale: `Mixed signals — balanced mix of opportunities with avg confidence ${Math.round(avgConfidence)}/100.`,
+    rationale: `Mixed signals — balanced mix of research picks with avg confidence ${Math.round(avgConfidence)}/100.`,
   }
 }
 
-function findBestMatch(recs: Recommendation[]): string {
+function findTopPick(recs: Recommendation[]): string {
   return recs.reduce((best, r) => (r.confidenceScore > best.confidenceScore ? r : best)).ticker
 }
 
 const MOOD_STYLES: Record<MarketMood, { bg: string; text: string; border: string; icon: typeof TrendingUp }> = {
-  Bullish: {
-    bg: 'bg-green-50', text: 'text-green-800', border: 'border-green-200',
-    icon: TrendingUp,
-  },
-  Neutral: {
-    bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200',
-    icon: Minus,
-  },
-  Bearish: {
-    bg: 'bg-red-50', text: 'text-red-800', border: 'border-red-200',
-    icon: TrendingDown,
-  },
+  Bullish: { bg: 'bg-green-50', text: 'text-green-800', border: 'border-green-200', icon: TrendingUp },
+  Neutral: { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', icon: Minus },
+  Bearish: { bg: 'bg-red-50', text: 'text-red-800', border: 'border-red-200', icon: TrendingDown },
 }
 
 function formatTs(iso: string): string {
@@ -78,7 +70,6 @@ export default function RecommendationsPage() {
   const [todayCount, setTodayCount] = useState(0)
   const [watchedSymbols, setWatchedSymbols] = useState<Set<string>>(new Set())
 
-  // Load most recent analysis + watchlist on mount
   useEffect(() => {
     Promise.all([
       fetch('/api/analyse').then((r) => r.ok ? r.json() : []),
@@ -93,7 +84,6 @@ export default function RecommendationsPage() {
           marketOutlook: '',
           recommendations: latest.recommendations,
         })
-        // Count today's analyses
         const today = new Date()
         const count = analyses.filter((a: { createdAt: string }) => {
           const d = new Date(a.createdAt)
@@ -103,7 +93,6 @@ export default function RecommendationsPage() {
         }).length
         setTodayCount(count)
       }
-      // Build set of watched symbols
       const symbols = new Set<string>()
       for (const wl of watchlists) {
         for (const s of (wl.stocks ?? [])) {
@@ -143,7 +132,7 @@ export default function RecommendationsPage() {
   }
 
   const mood = data ? deriveMood(data.recommendations) : null
-  const bestMatch = data ? findBestMatch(data.recommendations) : null
+  const topPick = data ? findTopPick(data.recommendations) : null
   const MoodIcon = mood ? MOOD_STYLES[mood.mood].icon : null
 
   return (
@@ -153,17 +142,17 @@ export default function RecommendationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-blue-600" />
-            Recommendations
+            Research Insights
           </h1>
           <p className="text-gray-500 mt-1 text-sm">
-            AI-curated stock picks personalised to your investor profile
+            ARIA Research Output — personalised to your investor profile
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
           {todayCount > 0 && (
             <span className="text-xs text-gray-500">
-              <span className="font-semibold text-gray-700">{todayCount}/3</span> analyses today
+              <span className="font-semibold text-gray-700">{todayCount}/3</span> research runs today
             </span>
           )}
           <Button
@@ -174,7 +163,7 @@ export default function RecommendationsPage() {
             {generating
               ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analysing…</>
               : data
-                ? <><RefreshCw className="mr-2 h-4 w-4" />Refresh Analysis</>
+                ? <><RefreshCw className="mr-2 h-4 w-4" />Run New Research</>
                 : <><Sparkles className="mr-2 h-4 w-4" />Generate</>
             }
           </Button>
@@ -187,7 +176,7 @@ export default function RecommendationsPage() {
           <CardContent className="py-3 px-4">
             <p className="text-sm text-amber-800 flex items-center gap-2">
               <Info className="h-4 w-4 shrink-0" />
-              Daily limit reached (3/3). Upgrade to Pro for unlimited analyses.
+              Daily research limit reached (3/3). Upgrade to Research Pro for unlimited research runs.
             </p>
           </CardContent>
         </Card>
@@ -225,8 +214,8 @@ export default function RecommendationsPage() {
               <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 animate-spin" />
             </div>
             <div className="text-center">
-              <p className="font-semibold text-gray-800">Building your personalised portfolio…</p>
-              <p className="text-sm text-gray-500 mt-1">Claude is reviewing market conditions and your profile</p>
+              <p className="font-semibold text-gray-800">Running ARIA research analysis…</p>
+              <p className="text-sm text-gray-500 mt-1">Reviewing live market conditions against your profile</p>
             </div>
           </CardContent>
         </Card>
@@ -244,17 +233,13 @@ export default function RecommendationsPage() {
               <div className="flex items-center gap-2">
                 <MoodIcon className={cn('h-5 w-5 shrink-0', MOOD_STYLES[mood.mood].text)} />
                 <span className={cn('font-bold text-base', MOOD_STYLES[mood.mood].text)}>
-                  Market Mood: {mood.mood}
+                  Market Research Mood: {mood.mood}
                 </span>
                 <Badge
                   variant="outline"
-                  className={cn(
-                    'text-[10px] border',
-                    MOOD_STYLES[mood.mood].text,
-                    MOOD_STYLES[mood.mood].border,
-                  )}
+                  className={cn('text-[10px] border', MOOD_STYLES[mood.mood].text, MOOD_STYLES[mood.mood].border)}
                 >
-                  {data.recommendations.length} picks
+                  {data.recommendations.length} research picks
                 </Badge>
               </div>
               <span className={cn('text-sm', MOOD_STYLES[mood.mood].text, 'sm:ml-2')}>
@@ -273,7 +258,7 @@ export default function RecommendationsPage() {
             <Card className="bg-blue-50 border-blue-100">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-blue-800 flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4" /> Portfolio Strategy
+                  <Sparkles className="h-4 w-4" /> Research Strategy
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -294,11 +279,16 @@ export default function RecommendationsPage() {
               <StockCard
                 key={`${rec.ticker}-${i}`}
                 rec={rec}
-                isBestMatch={rec.ticker === bestMatch}
+                isBestMatch={rec.ticker === topPick}
                 watchedSymbols={watchedSymbols}
                 onWatchlistToggle={handleWatchlistToggle}
               />
             ))}
+          </div>
+
+          {/* Inline disclaimer below cards */}
+          <div className="border-t pt-4">
+            <Disclaimer variant="inline" />
           </div>
         </>
       )}
@@ -311,30 +301,19 @@ export default function RecommendationsPage() {
               <Sparkles className="h-8 w-8 text-blue-500" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800 text-lg">No recommendations yet</p>
+              <p className="font-semibold text-gray-800 text-lg">No research output yet</p>
               <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
-                Generate your first AI analysis to see personalised stock picks based on your
-                risk profile, goals, and live market data.
+                Run your first ARIA research analysis to see personalised research picks based on
+                your risk profile, goals, and live market data.
               </p>
             </div>
             <Button onClick={generateAnalysis} disabled={generating}>
               <Sparkles className="mr-2 h-4 w-4" />
-              Generate Recommendations
+              Run Research Analysis
             </Button>
           </CardContent>
         </Card>
       )}
-
-      {/* ── Disclaimer ── */}
-      <div className="border-t pt-4">
-        <p className="text-[11px] text-gray-400 leading-relaxed">
-          <strong className="font-semibold">Disclaimer:</strong> These AI-generated recommendations
-          are for educational purposes only and do not constitute financial advice. This platform is
-          not SEBI-registered. Always consult a qualified financial advisor before making investment
-          decisions. Past performance is not indicative of future results. Investing in equities
-          involves risk, including possible loss of principal.
-        </p>
-      </div>
     </div>
   )
 }

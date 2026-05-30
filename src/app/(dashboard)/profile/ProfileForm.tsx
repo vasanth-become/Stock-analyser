@@ -84,7 +84,7 @@ const QUIZ_QUESTIONS = [
     id: 'q6',
     question: 'If you had ₹1 lakh to invest, which option would you choose?',
     options: [
-      { label: 'Fixed deposit — guaranteed returns', score: 1 },
+      { label: 'Fixed deposit — predictable returns', score: 1 },
       { label: 'Debt mutual fund — stable, low return', score: 2 },
       { label: 'Balanced fund — mix of equity & debt', score: 3 },
       { label: 'Large-cap equity fund', score: 4 },

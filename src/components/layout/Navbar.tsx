@@ -27,8 +27,7 @@ export function Navbar() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
               <TrendingUp className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-gray-900">StockSage</span>
-            <span className="hidden rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 sm:block">India</span>
+            <span className="text-lg font-bold text-gray-900">ARIA Research</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">

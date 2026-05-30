@@ -5,25 +5,32 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, TrendingUp, BookOpen, BriefcaseBusiness,
   Bell, Search, Settings, HelpCircle, BarChart2, Star, PiggyBank, CreditCard,
+  FileText, ShieldAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Research Dashboard', icon: LayoutDashboard },
   { href: '/markets', label: 'Markets', icon: TrendingUp },
   { href: '/search', label: 'Stock Search', icon: Search },
-  { href: '/watchlist', label: 'Watchlist', icon: BookOpen },
-  { href: '/portfolio', label: 'Portfolio', icon: BriefcaseBusiness },
-  { href: '/alerts', label: 'Alerts', icon: Bell },
+  { href: '/watchlist', label: 'Research Watchlist', icon: BookOpen },
+  { href: '/portfolio', label: 'Portfolio Tracker', icon: BriefcaseBusiness },
+  { href: '/alerts', label: 'Price Alerts', icon: Bell },
   { href: '/analysis', label: 'AI Analysis', icon: BarChart2 },
-  { href: '/recommendations', label: 'Recommendations', icon: Star },
-  { href: '/sip-planner', label: 'SIP Planner', icon: PiggyBank },
+  { href: '/recommendations', label: 'Research Insights', icon: Star },
+  { href: '/sip-planner', label: 'SIP Research Planner', icon: PiggyBank },
 ]
 
 const bottomItems = [
   { href: '/billing', label: 'Billing', icon: CreditCard },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/help', label: 'Help', icon: HelpCircle },
+]
+
+const legalItems = [
+  { href: '/disclaimer', label: 'Disclaimer', icon: ShieldAlert },
+  { href: '/terms', label: 'Terms', icon: FileText },
+  { href: '/privacy', label: 'Privacy', icon: FileText },
 ]
 
 export function Sidebar() {
@@ -50,7 +57,7 @@ export function Sidebar() {
           ))}
         </nav>
       </div>
-      <div className="px-3 py-4 border-t border-gray-200">
+      <div className="px-3 py-4 border-t border-gray-200 space-y-1">
         {bottomItems.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
@@ -61,6 +68,18 @@ export function Sidebar() {
             {label}
           </Link>
         ))}
+        <div className="pt-2 border-t border-gray-100">
+          {legalItems.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
     </aside>
   )

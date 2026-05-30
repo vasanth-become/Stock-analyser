@@ -450,7 +450,7 @@ export default function PortfolioPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <BriefcaseBusiness className="h-6 w-6 text-blue-600" />
-            Portfolio
+            Portfolio Tracker
           </h1>
           <p className="text-gray-500 text-sm mt-1">Track holdings, P&amp;L and sector allocation</p>
         </div>
@@ -475,6 +475,13 @@ export default function PortfolioPage() {
           onSave={editTarget ? updateHolding : addHolding}
           onCancel={() => { setShowForm(false); setEditTarget(null) }}
         />
+      )}
+
+      {/* P&L tracking note */}
+      {!loading && holdings.length > 0 && (
+        <p className="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
+          P&L shown is based on prices you entered manually and live market data. This is a tracking tool only. ARIA Research does not manage or execute trades on your behalf.
+        </p>
       )}
 
       {/* Summary cards */}

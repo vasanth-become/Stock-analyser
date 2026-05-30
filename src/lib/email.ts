@@ -69,8 +69,8 @@ function alertHtml(data: AlertEmailData): string {
   <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);padding:28px 32px">
-      <p style="margin:0;color:#bfdbfe;font-size:13px;font-weight:600;letter-spacing:0.05em">STOCKANALYSER ALERT</p>
-      <h1 style="margin:8px 0 0;color:#fff;font-size:24px;font-weight:800">${symbol} Alert Triggered</h1>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;font-weight:600;letter-spacing:0.05em">ARIA RESEARCH — PRICE ALERT</p>
+      <h1 style="margin:8px 0 0;color:#fff;font-size:24px;font-weight:800">${symbol} Price Alert Triggered</h1>
     </div>
 
     <!-- Body -->
@@ -111,12 +111,12 @@ function alertHtml(data: AlertEmailData): string {
     <!-- Footer -->
     <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px">
       <p style="margin:0;color:#94a3b8;font-size:12px">
-        You're receiving this because you set a price alert on StockAnalyser.
+        You're receiving this because you set a price alert on ARIA Research.
         <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://stockanalyser.app'}/dashboard/alerts"
           style="color:#3b82f6;text-decoration:none">Manage alerts</a>
       </p>
       <p style="margin:8px 0 0;color:#cbd5e1;font-size:11px">
-        Not SEBI-registered advice. For educational purposes only.
+        Research output only. Not investment advice. ARIA Research is not registered with SEBI as a Research Analyst or Investment Adviser. Please do your own research before investing.
       </p>
     </div>
   </div>
@@ -159,12 +159,12 @@ function digestHtml(data: DigestEmailData): string {
   <div style="max-width:600px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);padding:28px 32px">
-      <p style="margin:0;color:#bfdbfe;font-size:13px;font-weight:600;letter-spacing:0.05em">WEEKLY MARKET DIGEST</p>
+      <p style="margin:0;color:#bfdbfe;font-size:13px;font-weight:600;letter-spacing:0.05em">ARIA RESEARCH WEEKLY | YOUR PERSONALISED MARKET RESEARCH DIGEST</p>
       <h1 style="margin:8px 0 0;color:#fff;font-size:22px;font-weight:800">${weekRange}</h1>
     </div>
 
     <div style="padding:28px 32px;space-y:24px">
-      <p style="margin:0 0 24px;color:#374151;font-size:15px">Hi ${name},<br>Here's your personalised market digest for the week.</p>
+      <p style="margin:0 0 24px;color:#374151;font-size:15px">Hi ${name},<br>Here is your personalised market research digest — every Monday.</p>
 
       <!-- Index summary -->
       <h2 style="margin:0 0 12px;color:#0f172a;font-size:16px;font-weight:700">📈 Market Performance</h2>
@@ -178,7 +178,7 @@ function digestHtml(data: DigestEmailData): string {
 
       <!-- AI Pick of the week -->
       <div style="background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #dbeafe;border-radius:10px;padding:20px;margin-bottom:28px">
-        <h2 style="margin:0 0 12px;color:#1d4ed8;font-size:15px;font-weight:700">✨ AI Pick of the Week</h2>
+        <h2 style="margin:0 0 12px;color:#1d4ed8;font-size:15px;font-weight:700">✨ This week's research spotlight</h2>
         <p style="margin:0;color:#374151;font-size:14px;line-height:1.7">${aiRecommendation}</p>
       </div>
 
@@ -191,13 +191,13 @@ function digestHtml(data: DigestEmailData): string {
     <!-- Footer -->
     <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px">
       <p style="margin:0;color:#94a3b8;font-size:12px">
-        Weekly digest from StockAnalyser ·
+        ARIA Research Weekly —
         <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://stockanalyser.app'}/dashboard/alerts"
           style="color:#3b82f6;text-decoration:none">Manage preferences</a>
+        · <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://stockanalyser.app'}/dashboard" style="color:#3b82f6;text-decoration:none">View in browser</a>
       </p>
       <p style="margin:8px 0 0;color:#cbd5e1;font-size:11px">
-        Not SEBI-registered advice. For educational purposes only. Mutual fund investments are
-        subject to market risks.
+        This email is sent by ARIA Research, an AI-powered investment research platform. We are not registered with SEBI as a Research Analyst or Investment Adviser. Content in this email is for informational and educational purposes only and does not constitute investment advice or a solicitation to buy or sell any securities. Investments are subject to market risks. Past performance is not indicative of future results. Mutual fund investments are subject to market risks — please read all scheme-related documents carefully before investing.
       </p>
     </div>
   </div>
@@ -236,7 +236,7 @@ export async function sendDigestEmail(data: DigestEmailData): Promise<boolean> {
     const { error } = await resend.emails.send({
       from: FROM,
       to: data.to,
-      subject: `📊 Your Weekly Market Digest — ${data.weekRange}`,
+      subject: `ARIA Research Weekly | ${data.weekRange}`,
       html: digestHtml(data),
     })
     if (error) { console.error('[email] Digest send error:', error); return false }
@@ -313,7 +313,7 @@ function mercuryHtml(to: string, output: MercuryOutput): string {
 
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);padding:28px 32px">
-      <p style="margin:0;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase">MERCURY · WEEKLY MARKET BRIEFING</p>
+      <p style="margin:0;color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase">ARIA RESEARCH WEEKLY | MERCURY MARKET RESEARCH DIGEST</p>
       <h1 style="margin:8px 0 0;color:#fff;font-size:20px;font-weight:800">${emailMetadata.weekRange}</h1>
       <p style="margin:8px 0 0;color:#c7d2fe;font-size:13px">${emailMetadata.previewText}</p>
     </div>
@@ -364,7 +364,7 @@ function mercuryHtml(to: string, output: MercuryOutput): string {
 
       <!-- Section 4: This Week's Spotlight -->
       <div style="background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #dbeafe;border-radius:10px;padding:20px;margin-bottom:24px">
-        <p style="margin:0 0 6px;color:#6d28d9;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em">THIS WEEK'S PICK</p>
+        <p style="margin:0 0 6px;color:#6d28d9;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em">THIS WEEK'S RESEARCH SPOTLIGHT</p>
         <h2 style="margin:0 0 12px;color:#1d4ed8;font-size:16px;font-weight:800">${spotlight.headline}</h2>
         <div style="display:flex;gap:20px;margin-bottom:14px;flex-wrap:wrap">
           <span style="font-size:13px;color:#374151">Current: <strong>₹${spotlight.currentPrice.toLocaleString('en-IN')}</strong></span>

@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 
 // --- Types ---
 type Experience = 'BEGINNER' | 'INTERMEDIATE' | 'EXPERT'
+type Acknowledged = boolean
 type RiskTolerance = 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE'
 
 interface OnboardingData {
@@ -23,10 +24,11 @@ interface OnboardingData {
   experience: Experience | ''
   riskTolerance: RiskTolerance
   investmentGoals: string[]
+  acknowledged: Acknowledged
 }
 
 // --- Step definitions ---
-const STEPS = ['About You', 'Finances', 'Experience', 'Goals'] as const
+const STEPS = ['Before You Start', 'About You', 'Finances', 'Experience', 'Goals'] as const
 
 const EXPERIENCE_OPTIONS: { value: Experience; label: string; desc: string; icon: string }[] = [
   { value: 'BEGINNER', label: 'Beginner', desc: 'New to investing, learning the basics', icon: '🌱' },
@@ -50,6 +52,41 @@ const GOAL_OPTIONS = [
 ]
 
 // --- Step components ---
+function StepAcknowledge({ data, onChange }: { data: OnboardingData; onChange: (d: Partial<OnboardingData>) => void }) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Before we build your research profile</h2>
+        <p className="text-gray-500 mt-1">
+          ARIA Research uses your answers to personalise the research insights you see. This is not
+          financial planning or investment advice — it is a research customisation tool. You are
+          always in control of your investment decisions.
+        </p>
+      </div>
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+        <p className="text-sm font-semibold text-amber-900">Important</p>
+        <ul className="text-sm text-amber-800 space-y-1.5">
+          <li>• ARIA Research is <strong>not</strong> a SEBI-registered Investment Adviser or Research Analyst</li>
+          <li>• All research outputs are AI-generated and for informational purposes only</li>
+          <li>• You are solely responsible for your investment decisions</li>
+          <li>• Always consult a SEBI-registered adviser before investing</li>
+        </ul>
+      </div>
+      <label className="flex items-start gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={data.acknowledged}
+          onChange={(e) => onChange({ acknowledged: e.target.checked })}
+          className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span className="text-sm text-gray-700">
+          I understand that ARIA Research is an AI research tool and not a SEBI-registered investment adviser. I will use research outputs as one input for my own decisions.
+        </span>
+      </label>
+    </div>
+  )
+}
+
 function StepAbout({ data, onChange }: { data: OnboardingData; onChange: (d: Partial<OnboardingData>) => void }) {
   return (
     <div className="space-y-5">
@@ -79,7 +116,7 @@ function StepAbout({ data, onChange }: { data: OnboardingData; onChange: (d: Par
             onChange={(e) => onChange({ age: e.target.value })}
             className="h-11"
           />
-          <p className="text-xs text-gray-400">Must be 18 or above to use StockSage</p>
+          <p className="text-xs text-gray-400">Must be 18 or above to use ARIA Research</p>
         </div>
       </div>
     </div>
@@ -238,6 +275,7 @@ export default function OnboardingPage() {
     experience: '',
     riskTolerance: 'MODERATE',
     investmentGoals: [],
+    acknowledged: false,
   })
 
   function update(partial: Partial<OnboardingData>) {
@@ -245,10 +283,11 @@ export default function OnboardingPage() {
   }
 
   function canProceed() {
-    if (step === 0) return data.displayName.trim().length >= 2 && Number(data.age) >= 18
-    if (step === 1) return !!data.monthlyIncome
-    if (step === 2) return !!data.experience
-    if (step === 3) return data.investmentGoals.length >= 1
+    if (step === 0) return data.acknowledged
+    if (step === 1) return data.displayName.trim().length >= 2 && Number(data.age) >= 18
+    if (step === 2) return !!data.monthlyIncome
+    if (step === 3) return !!data.experience
+    if (step === 4) return data.investmentGoals.length >= 1
     return false
   }
 
@@ -284,6 +323,7 @@ export default function OnboardingPage() {
   }
 
   const stepComponents = [
+    <StepAcknowledge key="acknowledge" data={data} onChange={update} />,
     <StepAbout key="about" data={data} onChange={update} />,
     <StepFinances key="finances" data={data} onChange={update} />,
     <StepExperience key="experience" data={data} onChange={update} />,
@@ -298,13 +338,13 @@ export default function OnboardingPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
             <TrendingUp className="h-5 w-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-gray-900">StockSage India</span>
+          <span className="text-xl font-bold text-gray-900">ARIA Research</span>
         </div>
 
         {/* Progress steps */}
         <div className="flex items-center justify-between mb-8 px-2">
           {STEPS.map((label, i) => {
-            const icons = [User, IndianRupee, BarChart2, Target]
+            const icons = [Check, User, IndianRupee, BarChart2, Target]
             const Icon = icons[i]
             const done = i < step
             const active = i === step
@@ -364,7 +404,16 @@ export default function OnboardingPage() {
                 Back
               </Button>
 
-              {step < STEPS.length - 1 ? (
+              {step === 0 ? (
+                <Button
+                  onClick={() => setStep((s) => s + 1)}
+                  disabled={!canProceed()}
+                  className="gap-1 px-6"
+                >
+                  I understand — build my research profile
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : step < STEPS.length - 1 ? (
                 <Button
                   onClick={() => setStep((s) => s + 1)}
                   disabled={!canProceed()}
@@ -382,7 +431,7 @@ export default function OnboardingPage() {
                   {saving ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-1" />Saving...</>
                   ) : (
-                    <>Go to Dashboard <ChevronRight className="h-4 w-4" /></>
+                    <>Go to my research dashboard <ChevronRight className="h-4 w-4" /></>
                   )}
                 </Button>
               )}

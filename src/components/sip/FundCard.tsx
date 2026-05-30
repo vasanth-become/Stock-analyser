@@ -48,7 +48,7 @@ export function FundCard({ rec }: { rec: SipAiRecommendation }) {
             'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
             PRIORITY_STYLES[priority],
           )}>
-            {priority === 'Primary' ? '★ Primary Pick' : priority}
+            {priority === 'Primary' ? '★ Top Research Pick' : priority}
           </span>
           <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', RISK_STYLES[fund.riskLevel])}>
             {fund.riskLevel} Risk
@@ -112,7 +112,7 @@ export function FundCard({ rec }: { rec: SipAiRecommendation }) {
           <p className="text-xs text-gray-600 leading-relaxed">{reasoning}</p>
         </div>
 
-        {/* Start SIP CTA */}
+        {/* Explore on AMC CTA — links to AMC, never implies in-app SIP execution */}
         <a
           href={fund.fundUrl}
           target="_blank"
@@ -124,7 +124,7 @@ export function FundCard({ rec }: { rec: SipAiRecommendation }) {
               : 'border border-blue-600 text-blue-700 hover:bg-blue-50',
           )}
         >
-          Start SIP
+          Explore on {fund.amc}
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </CardContent>

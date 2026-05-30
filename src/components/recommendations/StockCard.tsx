@@ -134,7 +134,7 @@ export function StockCard({ rec, isBestMatch, watchedSymbols, onWatchlistToggle 
         {isBestMatch && (
           <div className="mb-2">
             <span className="inline-flex items-center gap-1 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-              ★ Best match for your profile
+              ★ Top research pick for your profile
             </span>
           </div>
         )}
@@ -196,7 +196,7 @@ export function StockCard({ rec, isBestMatch, watchedSymbols, onWatchlistToggle 
         {/* Confidence bar */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] text-gray-400 uppercase tracking-wide">AI Confidence</span>
+            <span className="text-[10px] text-gray-400 uppercase tracking-wide" title="This score reflects ARIA's research conviction based on fundamental data and market conditions. It is not a guarantee of performance. Higher scores indicate stronger research alignment with your profile — not certainty of returns.">AI Confidence ⓘ</span>
             <span className={cn(
               'text-[10px] font-medium flex items-center gap-1',
               RISK_DOT[rec.riskLevel] ? '' : '',
@@ -226,22 +226,22 @@ export function StockCard({ rec, isBestMatch, watchedSymbols, onWatchlistToggle 
         {/* Price levels */}
         <div className="space-y-1.5 border-t pt-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1 text-gray-500">
-              <Target className="h-3 w-3" />Buy Zone
+            <span className="flex items-center gap-1 text-gray-500" title="This is the price range where ARIA's research analysis suggests the stock may offer a reasonable risk-reward based on historical support levels. This is not a guaranteed entry point or a buy instruction.">
+              <Target className="h-3 w-3" />Research Entry Range ⓘ
             </span>
             <span className="font-medium text-gray-800">
               ₹{fmt(rec.buyZone.low)}–{fmt(rec.buyZone.high)}
             </span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1 text-green-600">
-              <TrendingUp className="h-3 w-3" />Target
+            <span className="flex items-center gap-1 text-green-600" title="This is a 12-month research estimate based on earnings growth projections and peer valuation. It is not a guaranteed outcome. Actual prices may vary significantly.">
+              <TrendingUp className="h-3 w-3" />Target Price ⓘ
             </span>
             <span className="font-semibold text-green-600">₹{fmt(rec.targetPrice)}</span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1 text-red-500">
-              <TrendingDown className="h-3 w-3" />Stop Loss
+            <span className="flex items-center gap-1 text-red-500" title="This price level indicates where ARIA's research suggests the original thesis may no longer be valid. It is not a stop-loss instruction. Please consult a registered adviser for personalised risk management.">
+              <TrendingDown className="h-3 w-3" />Research Risk Level ⓘ
             </span>
             <span className="font-semibold text-red-500">₹{fmt(rec.stopLoss)}</span>
           </div>

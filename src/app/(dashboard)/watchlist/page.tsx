@@ -90,7 +90,7 @@ function NotesCell({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
-          placeholder="Add your notes, buy target…"
+          placeholder="Add your own research notes for this stock…"
           className="flex-1 text-xs border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 min-w-0"
         />
         <button onClick={save} disabled={saving} className="text-green-600 hover:text-green-800 p-0.5">
@@ -109,7 +109,7 @@ function NotesCell({
       className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors group max-w-full"
     >
       <Pencil className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-      <span className="truncate max-w-[200px]">{value || 'Add notes…'}</span>
+      <span className="truncate max-w-[200px]">{value || 'Add research notes…'}</span>
     </button>
   )
 }
@@ -287,9 +287,9 @@ export default function WatchlistPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <BookOpen className="h-6 w-6 text-blue-600" />
-            Watchlist
+            My Research Watchlist
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Track stocks with live prices and personal notes</p>
+          <p className="text-gray-500 text-sm mt-1">Track stocks you are researching with live prices and personal notes</p>
         </div>
         <button
           onClick={() => setRefreshKey((k) => k + 1)}
