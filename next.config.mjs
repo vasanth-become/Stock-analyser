@@ -8,6 +8,7 @@ const nextConfig = {
   // Enable server instrumentation (cron init + Sentry + env validation)
   experimental: {
     instrumentationHook: true,
+    serverComponentsExternalPackages: ['@prisma/client', '.prisma/client'],
   },
 
   images: {
