@@ -1,4 +1,7 @@
 import { withSentryConfig } from '@sentry/nextjs'
+import { createRequire } from 'module'
+
+const require = createRequire(import.meta.url)
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -14,9 +17,17 @@ const nextConfig = {
     domains: ['avatars.githubusercontent.com'],
   },
 
-  // Suppress yahoo-finance2 punycode deprecation warning
   webpack(config) {
     config.ignoreWarnings = [{ module: /node_modules\/punycode/ }]
+
+    // Webpack treats '.prisma/client/default' as a relative path (starts with '.'),
+    // but Node.js treats it as a package name and finds node_modules/.prisma/client/default.
+    // This alias tells webpack where to find it.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '.prisma/client/default': require.resolve('.prisma/client/default'),
+    }
+
     return config
   },
 
@@ -50,22 +61,12 @@ const nextConfig = {
 }
 
 export default withSentryConfig(nextConfig, {
-  // Suppress the Sentry CLI output during builds (set to false to debug)
   silent: true,
-
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
-
-  // Upload wider set of source maps for better stack traces
   widenClientFileUpload: true,
-
-  // Hide source maps from the client bundle
   hideSourceMaps: true,
-
-  // Suppress Sentry SDK logger calls in production bundles
   disableLogger: true,
-
-  // Don't create Vercel cron monitors automatically (we define them manually)
   automaticVercelMonitors: false,
 })
