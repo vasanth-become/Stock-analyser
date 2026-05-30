@@ -49,8 +49,8 @@ async function getRedis(): Promise<RedisClient | null> {
   if (redis) return redis
   if (!process.env.REDIS_URL) return null
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
-    const { createClient } = require('redis') as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { createClient } = (await import(/* webpackIgnore: true */ 'redis')) as any
     const client = createClient({ url: process.env.REDIS_URL })
     await client.connect()
     redis = client as unknown as RedisClient
