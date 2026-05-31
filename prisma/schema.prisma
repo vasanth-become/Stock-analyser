@@ -41,8 +41,49 @@ model User {
   behaviourEvents      BehaviourEvent[]
   behaviourScore       BehaviourScore?
   behaviourAlerts      BehaviourAlert[]
+  ariaConversations    ARIAConversation[]
+  languagePreference   UserLanguagePreference?
 
   @@map("users")
+}
+
+model ARIAConversation {
+  id        String        @id @default(cuid())
+  userId    String
+  language  String        @default("en")
+  title     String?
+  messages  ARIAMessage[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+  @@map("aria_conversations")
+}
+
+model ARIAMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  role           String           // "user" | "assistant"
+  content        String           @db.Text
+  detectedLang   String?
+  createdAt      DateTime         @default(now())
+
+  conversation   ARIAConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("aria_messages")
+}
+
+model UserLanguagePreference {
+  id       String @id @default(cuid())
+  userId   String @unique
+  language String @default("en")
+
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_language_preferences")
 }
 
 model BehaviourEvent {
