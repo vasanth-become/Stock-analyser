@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Activity, IndianRupee, BarChart2, Sparkles } from 'lucide-react'
+import { TrendingUp, TrendingDown, Activity, IndianRupee, BarChart2, Sparkles, Target } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ProfileSummaryCard } from '@/components/dashboard/ProfileSummaryCard'
+import { calculateGoalProjection } from '@/lib/goalClock/goalCalculator'
 
 const marketIndices = [
   { name: 'NIFTY 50', value: '22,456.80', change: '+234.50', pct: '+1.05%', up: true },
@@ -28,10 +29,18 @@ const topLosers = [
 
 export default async function DashboardPage() {
   const session = await auth()
-  const profile = session?.user?.id
-    ? await prisma.investorProfile.findUnique({ where: { userId: session.user.id } })
-    : null
+  const [profile, primaryGoal] = await Promise.all([
+    session?.user?.id
+      ? prisma.investorProfile.findUnique({ where: { userId: session.user.id } })
+      : null,
+    session?.user?.id
+      ? prisma.financialGoal.findFirst({
+          where: { userId: session.user.id, isActive: true, isPrimary: true },
+        })
+      : null,
+  ])
   const greeting = profile?.displayName || session?.user?.name?.split(' ')[0] || 'Investor'
+  const goalProjection = primaryGoal ? calculateGoalProjection(primaryGoal) : null
 
   return (
     <div className="space-y-6">
@@ -162,6 +171,80 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Goal Clock Widget */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-blue-600" />
+              Goal Clock
+            </CardTitle>
+            <Link href="/goals" className="text-sm text-blue-600 hover:underline">View all goals →</Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {primaryGoal && goalProjection ? (
+            <div className="flex items-center gap-6">
+              {/* Mini ring — static SVG, no client JS needed */}
+              {(() => {
+                const pct = Math.min(100, goalProjection.percentComplete)
+                const r = 36, sw = 8, dim = 88
+                const circ = 2 * Math.PI * r
+                const filled = pct / 100 * circ
+                const colour = pct >= 100 ? '#16a34a' : goalProjection.onTrack ? '#2563eb' : '#f59e0b'
+                return (
+                  <div className="relative shrink-0" style={{ width: dim, height: dim }}>
+                    <svg width={dim} height={dim} style={{ transform: 'rotate(-90deg)' }}>
+                      <circle cx={44} cy={44} r={r} fill="none" stroke="#e2e8f0" strokeWidth={sw} />
+                      <circle cx={44} cy={44} r={r} fill="none" stroke={colour} strokeWidth={sw}
+                        strokeLinecap="round"
+                        strokeDasharray={`${filled} ${circ - filled}`} />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span style={{ fontSize: 20 }}>{primaryGoal.emoji}</span>
+                      <span className="text-[11px] font-bold text-gray-700">{pct.toFixed(0)}%</span>
+                    </div>
+                  </div>
+                )
+              })()}
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-gray-900 truncate">{primaryGoal.name}</p>
+                <p className="text-sm text-gray-500">
+                  {goalProjection.onTrack ? '✅ On track' : '⚠️ Behind schedule'}
+                  {' · '}
+                  {(() => {
+                    const m = goalProjection.monthsRemaining
+                    if (m <= 0) return 'Due'
+                    const y = Math.floor(m / 12), mo = m % 12
+                    if (y === 0) return `${mo}mo left`
+                    if (mo === 0) return `${y}yr left`
+                    return `${y}yr ${mo}mo left`
+                  })()}
+                </p>
+                {goalProjection.sipGap > 0 && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Need ₹{Math.round(goalProjection.sipGap).toLocaleString('en-IN')}/mo more to stay on track
+                  </p>
+                )}
+              </div>
+              <Link href={`/goals/${primaryGoal.id}`}>
+                <Button variant="outline" size="sm">View</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-500">No financial goals set yet. Start tracking your dreams.</p>
+              <Link href="/goals/new">
+                <Button size="sm" className="gap-1.5">
+                  <Target className="h-3.5 w-3.5" />
+                  Set your first goal
+                </Button>
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card>

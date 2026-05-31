@@ -97,7 +97,18 @@ export function initMarketCron(): void {
       }
     })
 
-    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest, monthly reset, behaviour guard).')
+    // ── Job 7: Monthly Goal Clock update — 1st of month 03:30 UTC = 09:00 IST ─
+    cron.schedule('30 3 1 * *', async () => {
+      console.log('[cron] Sending monthly goal updates…')
+      try {
+        const { sendMonthlyGoalUpdates } = await import('./cron/goalMonthlyUpdate')
+        await sendMonthlyGoalUpdates()
+      } catch (err) {
+        console.error('[cron] Monthly goal update failed:', err)
+      }
+    })
+
+    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest, monthly reset, behaviour guard, goal monthly update).')
   }).catch((err) => {
     console.warn('[cron] node-cron unavailable, skipping schedulers:', err.message)
   })

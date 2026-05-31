@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, TrendingUp, BookOpen, BriefcaseBusiness,
   Bell, Search, Settings, HelpCircle, BarChart2, Star, PiggyBank, CreditCard,
-  FileText, ShieldAlert, ShieldCheck, MessageCircle,
+  FileText, ShieldAlert, ShieldCheck, MessageCircle, Target,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +21,7 @@ const navItems = [
   { href: '/sip-planner', label: 'SIP Research Planner', icon: PiggyBank },
   { href: '/behaviour', label: 'Behaviour Guard', icon: ShieldCheck },
   { href: '/ask-aria', label: 'Ask ARIA', icon: MessageCircle },
+  { href: '/goals', label: 'Goal Clock', icon: Target },
 ]
 
 const bottomItems = [

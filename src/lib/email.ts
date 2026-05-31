@@ -550,6 +550,101 @@ function behaviourGuardHtml(data: BehaviourGuardEmailData): string {
 </html>`
 }
 
+// ─── Monthly Goal Update email (Module 13) ───────────────────────────────────
+
+export interface GoalMonthlyEmailData {
+  to: string
+  name: string
+  month: string          // e.g. "May 2025"
+  goals: {
+    name: string
+    emoji: string
+    percentComplete: number
+    currentCorpus: number
+    targetAmount: number
+    onTrack: boolean
+    monthsRemaining: number
+    sipGap: number
+  }[]
+}
+
+function fmtGoalINR(n: number): string {
+  if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)} Cr`
+  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(1)} L`
+  return `₹${Math.round(n).toLocaleString('en-IN')}`
+}
+
+function goalMonthlyHtml(data: GoalMonthlyEmailData): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://stockanalyser.app'
+  const goalRows = data.goals.map((g) => {
+    const barWidth = Math.round(Math.min(100, g.percentComplete))
+    const colour = g.percentComplete >= 100 ? '#16a34a' : g.onTrack ? '#2563eb' : '#f59e0b'
+    const mo = g.monthsRemaining
+    const timeLeft = mo <= 0 ? 'Due' : mo < 12 ? `${mo}mo` : `${Math.floor(mo / 12)}yr ${mo % 12}mo`
+    return `
+    <tr>
+      <td style="padding:16px 0;border-bottom:1px solid #f1f5f9;vertical-align:top">
+        <div style="font-size:24px;margin-bottom:4px">${g.emoji}</div>
+        <div style="font-weight:700;color:#0f172a;margin-bottom:2px">${g.name}</div>
+        <div style="font-size:12px;color:#64748b">${fmtGoalINR(g.currentCorpus)} of ${fmtGoalINR(g.targetAmount)}</div>
+        <div style="background:#e2e8f0;border-radius:4px;height:6px;margin:8px 0;width:100%">
+          <div style="background:${colour};border-radius:4px;height:6px;width:${barWidth}%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span style="color:${colour};font-weight:700">${barWidth}% complete</span>
+          <span style="color:#64748b">${timeLeft} left</span>
+        </div>
+        ${g.sipGap > 0 ? `<div style="font-size:12px;color:#b45309;margin-top:4px">⚠️ Increase SIP by ${fmtGoalINR(g.sipGap)}/mo to stay on track</div>` : `<div style="font-size:12px;color:#16a34a;margin-top:4px">✅ On track — keep it up!</div>`}
+      </td>
+    </tr>`
+  }).join('')
+
+  return `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:600px;margin:0 auto;padding:32px 16px">
+    <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+      <div style="background:linear-gradient(135deg,#1d4ed8,#4338ca);padding:32px;text-align:center">
+        <div style="font-size:40px;margin-bottom:8px">🎯</div>
+        <h1 style="color:#ffffff;margin:0;font-size:22px">Your Goal Clock Update</h1>
+        <p style="color:#bfdbfe;margin:8px 0 0;font-size:14px">${data.month} Progress Report</p>
+      </div>
+      <div style="padding:28px 32px">
+        <p style="color:#374151;margin:0 0 20px">Hi ${data.name}, here's how your financial goals are tracking this month:</p>
+        <table style="width:100%;border-collapse:collapse">${goalRows}</table>
+        <div style="margin-top:24px;text-align:center">
+          <a href="${appUrl}/goals" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">View Full Goal Clock →</a>
+        </div>
+      </div>
+      <div style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center">
+        <p style="color:#94a3b8;font-size:12px;margin:0">ARIA Research is not a SEBI-registered adviser. This is for informational purposes only.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+export async function sendGoalMonthlyUpdate(data: GoalMonthlyEmailData): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) {
+    console.log('[email] RESEND_API_KEY not set — skipping goal monthly update for', data.to)
+    return false
+  }
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to: data.to,
+      subject: `🎯 Your Goal Clock Update — ${data.month}`,
+      html: goalMonthlyHtml(data),
+    })
+    if (error) { console.error('[email] Goal monthly send error:', error); return false }
+    return true
+  } catch (err) {
+    console.error('[email] sendGoalMonthlyUpdate failed:', err)
+    return false
+  }
+}
+
 export async function sendBehaviourGuardAlert(data: BehaviourGuardEmailData): Promise<boolean> {
   if (!process.env.RESEND_API_KEY) {
     console.log('[email] RESEND_API_KEY not set — skipping behaviour guard alert for', data.to)
