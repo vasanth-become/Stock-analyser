@@ -34,9 +34,10 @@ export default async function DashboardPage() {
       ? prisma.investorProfile.findUnique({ where: { userId: session.user.id } })
       : null,
     session?.user?.id
-      ? prisma.financialGoal.findFirst({
-          where: { userId: session.user.id, isActive: true, isPrimary: true },
-        })
+      // financialGoal requires schema migration — fail gracefully if table doesn't exist yet
+      ? (prisma.financialGoal as typeof prisma.financialGoal | undefined)
+          ?.findFirst({ where: { userId: session.user.id, isActive: true, isPrimary: true } })
+          .catch(() => null) ?? null
       : null,
   ])
   const greeting = profile?.displayName || session?.user?.name?.split(' ')[0] || 'Investor'
