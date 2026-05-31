@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, TrendingUp, BookOpen, BriefcaseBusiness,
   Bell, Search, Settings, HelpCircle, BarChart2, Star, PiggyBank, CreditCard,
-  FileText, ShieldAlert, ShieldCheck, MessageCircle, Target,
+  FileText, ShieldAlert, ShieldCheck, MessageCircle, Target, Brain,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +22,7 @@ const navItems = [
   { href: '/behaviour', label: 'Behaviour Guard', icon: ShieldCheck },
   { href: '/ask-aria', label: 'Ask ARIA', icon: MessageCircle },
   { href: '/goals', label: 'Goal Clock', icon: Target },
+  { href: '/thesis', label: 'Thesis Tracker', icon: Brain },
 ]
 
 const bottomItems = [

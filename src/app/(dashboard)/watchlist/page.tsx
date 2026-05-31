@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   BookOpen, Plus, Trash2, TrendingUp, TrendingDown,
-  Search, RefreshCw, Loader2, Pencil, Check, X, ArrowUpRight,
+  Search, RefreshCw, Loader2, Pencil, Check, X, ArrowUpRight, Brain,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -20,6 +20,12 @@ interface WatchlistStockRecord {
   exchange: 'NSE' | 'BSE'
   notes: string | null
   addedAt: string
+}
+
+interface ThesisStub {
+  id: string
+  ticker: string
+  currentStatus: string
 }
 
 interface WatchlistRecord {
@@ -116,14 +122,23 @@ function NotesCell({
 
 // ─── Stock row ───────────────────────────────────────────────────────────────
 
+const THESIS_STATUS: Record<string, { label: string; cls: string }> = {
+  intact:   { label: '✅ Intact',    cls: 'text-green-700 bg-green-50 border-green-200' },
+  weakening:{ label: '⚠️ Weakening', cls: 'text-amber-700 bg-amber-50 border-amber-200' },
+  broken:   { label: '❌ Broken',    cls: 'text-red-700 bg-red-50 border-red-200' },
+  achieved: { label: '🎯 Achieved',  cls: 'text-purple-700 bg-purple-50 border-purple-200' },
+}
+
 function WatchlistRow({
   stock,
   watchlistId,
+  thesis,
   onRemove,
   onNotesSave,
 }: {
   stock: WatchlistStockRecord
   watchlistId: string
+  thesis: ThesisStub | null | 'loading'
   onRemove: (symbol: string) => void
   onNotesSave: (id: string, val: string) => void
 }) {
@@ -150,7 +165,7 @@ function WatchlistRow({
   const up = (quote?.changePercent ?? 0) >= 0
 
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-3 sm:grid-cols-[2fr_1.5fr_2fr_auto] items-center py-3 px-4 -mx-4 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
+    <div className="grid grid-cols-[1fr_auto] gap-3 sm:grid-cols-[2fr_1.5fr_2fr_1.2fr_auto] items-center py-3 px-4 -mx-4 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
       {/* Symbol + name */}
       <div className="flex items-center gap-3 min-w-0">
         <div className={cn(
@@ -204,6 +219,28 @@ function WatchlistRow({
         )}
       </div>
 
+      {/* Thesis status */}
+      <div className="hidden sm:flex items-center">
+        {thesis === 'loading' ? (
+          <span className="text-[10px] text-gray-400 flex items-center gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" />Building thesis…
+          </span>
+        ) : thesis ? (
+          <Link href={`/thesis/${thesis.id}`}>
+            <span className={cn(
+              'text-[10px] font-semibold px-2 py-0.5 rounded-full border cursor-pointer hover:opacity-80 transition-opacity',
+              THESIS_STATUS[thesis.currentStatus]?.cls ?? 'text-gray-600 bg-gray-50 border-gray-200',
+            )}>
+              {THESIS_STATUS[thesis.currentStatus]?.label ?? thesis.currentStatus}
+            </span>
+          </Link>
+        ) : (
+          <span className="text-[10px] text-gray-300 flex items-center gap-1">
+            <Brain className="h-3 w-3" />No thesis
+          </span>
+        )}
+      </div>
+
       {/* Actions */}
       <div className="flex items-center gap-1">
         <Badge variant="outline" className="hidden sm:flex text-[10px]">{stock.exchange}</Badge>
@@ -230,6 +267,18 @@ export default function WatchlistPage() {
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [theses, setTheses] = useState<Record<string, ThesisStub | 'loading'>>({})
+
+  useEffect(() => {
+    fetch('/api/thesis')
+      .then((r) => r.ok ? r.json() : [])
+      .then((list: ThesisStub[]) => {
+        const map: Record<string, ThesisStub> = {}
+        for (const t of list) map[t.ticker] = t
+        setTheses(map)
+      })
+      .catch(() => {})
+  }, [])
 
   const fetchWatchlist = useCallback(async () => {
     try {
@@ -258,6 +307,20 @@ export default function WatchlistPage() {
       if (!res.ok) throw new Error(data.error || 'Failed')
       setSymbol('')
       await fetchWatchlist()
+      // Auto-generate thesis in background
+      const sym = symbol.trim().toUpperCase()
+      setTheses((prev) => ({ ...prev, [sym]: 'loading' }))
+      fetch('/api/thesis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker: sym, companyName: `${sym} Limited`, sector: 'Equity' }),
+      })
+        .then((r) => r.ok ? r.json() : null)
+        .then((t) => {
+          if (t) setTheses((prev) => ({ ...prev, [sym]: t as ThesisStub }))
+          else setTheses((prev) => { const n = { ...prev }; delete n[sym]; return n })
+        })
+        .catch(() => setTheses((prev) => { const n = { ...prev }; delete n[sym]; return n }))
     } catch (e: unknown) {
       setAddError(e instanceof Error ? e.message : 'Failed to add stock')
     } finally {
@@ -356,10 +419,11 @@ export default function WatchlistPage() {
               </CardDescription>
             </div>
             {stocks.length > 0 && (
-              <div className="hidden sm:grid grid-cols-4 gap-3 text-[10px] uppercase tracking-wide text-gray-400 text-right pr-4 w-80">
+              <div className="hidden sm:grid grid-cols-5 gap-3 text-[10px] uppercase tracking-wide text-gray-400 text-right pr-4 w-96">
                 <span className="col-span-1 text-left">Stock</span>
                 <span>Price</span>
                 <span>52-Week Range</span>
+                <span>Thesis</span>
                 <span />
               </div>
             )}
@@ -385,6 +449,7 @@ export default function WatchlistPage() {
                   key={s.id}
                   stock={s}
                   watchlistId={watchlist!.id}
+                  thesis={theses[s.symbol] ?? null}
                   onRemove={removeStock}
                   onNotesSave={updateNotes}
                 />

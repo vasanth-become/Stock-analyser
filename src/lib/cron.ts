@@ -108,7 +108,18 @@ export function initMarketCron(): void {
       }
     })
 
-    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest, monthly reset, behaviour guard, goal monthly update).')
+    // ── Job 8: Weekly thesis review — Sunday 00:30 UTC = 06:00 IST ───────────
+    cron.schedule('30 0 * * 0', async () => {
+      console.log('[cron] Running weekly thesis reviews…')
+      try {
+        const { runWeeklyThesisReview } = await import('./cron/weeklyThesisReview')
+        await runWeeklyThesisReview()
+      } catch (err) {
+        console.error('[cron] Weekly thesis review failed:', err)
+      }
+    })
+
+    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest, monthly reset, behaviour guard, goal monthly update, thesis review).')
   }).catch((err) => {
     console.warn('[cron] node-cron unavailable, skipping schedulers:', err.message)
   })

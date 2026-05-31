@@ -44,6 +44,7 @@ model User {
   ariaConversations    ARIAConversation[]
   languagePreference   UserLanguagePreference?
   financialGoals       FinancialGoal[]
+  stockTheses          StockThesis[]
 
   @@map("users")
 }
@@ -98,6 +99,75 @@ model GoalSnapshot {
 
   @@index([goalId, snapshotDate])
   @@map("goal_snapshots")
+}
+
+// ─── Module 14: Thesis Tracker ───────────────────────────────────────────────
+
+model StockThesis {
+  id              String    @id @default(cuid())
+  userId          String
+  ticker          String
+  companyName     String
+  sector          String
+  addedAt         DateTime  @default(now())
+
+  originalThesis  String    @db.Text
+  userNotes       String?   @db.Text
+
+  buyZone         Json?
+  targetPrice     Float?
+  stopLossLevel   Float?
+  timeHorizon     String?
+
+  currentStatus   String    @default("intact")
+  confidenceScore Int       @default(75)
+
+  lastReviewedAt  DateTime  @default(now())
+  nextReviewDue   DateTime
+
+  keyMetrics      Json
+  watchPoints     String[]
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews         ThesisReview[]
+  alerts          ThesisAlert[]
+
+  @@unique([userId, ticker])
+  @@index([userId, currentStatus])
+  @@index([nextReviewDue])
+  @@map("stock_theses")
+}
+
+model ThesisReview {
+  id              String      @id @default(cuid())
+  thesisId        String
+  reviewDate      DateTime    @default(now())
+  previousStatus  String
+  newStatus       String
+  statusChanged   Boolean     @default(false)
+  aiSummary       String      @db.Text
+  keyChanges      String[]
+  newConfidence   Int
+  reviewedBy      String
+
+  thesis          StockThesis @relation(fields: [thesisId], references: [id], onDelete: Cascade)
+
+  @@index([thesisId, reviewDate])
+  @@map("thesis_reviews")
+}
+
+model ThesisAlert {
+  id          String      @id @default(cuid())
+  thesisId    String
+  alertType   String
+  message     String
+  isRead      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+
+  thesis      StockThesis @relation(fields: [thesisId], references: [id], onDelete: Cascade)
+
+  @@index([thesisId, isRead])
+  @@map("thesis_alerts")
 }
 
 model ARIAConversation {

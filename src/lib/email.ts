@@ -664,3 +664,91 @@ export async function sendBehaviourGuardAlert(data: BehaviourGuardEmailData): Pr
     return false
   }
 }
+
+// ─── Weekly Thesis Review email (Module 14) ──────────────────────────────────
+
+export interface ThesisWeeklyEmailData {
+  to: string
+  name: string
+  intact: string[]
+  weakening: { ticker: string; summary: string }[]
+  broken: { ticker: string; summary: string }[]
+}
+
+function thesisWeeklyHtml(data: ThesisWeeklyEmailData): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://stockanalyser.app'
+  const total = data.intact.length + data.weakening.length + data.broken.length
+
+  const brokenSection = data.broken.length > 0 ? `
+    <div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:20px;margin-bottom:16px">
+      <p style="color:#be123c;font-weight:700;font-size:14px;margin:0 0 12px">❌ Broken Theses — Action Required (${data.broken.length})</p>
+      ${data.broken.map((t) => `
+        <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #fecdd3">
+          <p style="font-weight:700;color:#0f172a;margin:0 0 4px">${t.ticker}</p>
+          <p style="color:#64748b;font-size:13px;margin:0">${t.summary}</p>
+          <a href="${appUrl}/thesis" style="font-size:12px;color:#be123c;text-decoration:none">View thesis →</a>
+        </div>`).join('')}
+    </div>` : ''
+
+  const weakeningSection = data.weakening.length > 0 ? `
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:20px;margin-bottom:16px">
+      <p style="color:#b45309;font-weight:700;font-size:14px;margin:0 0 12px">⚠️ Weakening Theses — Watch Closely (${data.weakening.length})</p>
+      ${data.weakening.map((t) => `
+        <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #fde68a">
+          <p style="font-weight:700;color:#0f172a;margin:0 0 4px">${t.ticker}</p>
+          <p style="color:#64748b;font-size:13px;margin:0">${t.summary}</p>
+        </div>`).join('')}
+    </div>` : ''
+
+  const intactSection = data.intact.length > 0 ? `
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;margin-bottom:16px">
+      <p style="color:#15803d;font-weight:700;font-size:14px;margin:0 0 8px">✅ Intact Theses (${data.intact.length})</p>
+      <p style="color:#374151;font-size:13px;margin:0">Your thesis on <strong>${data.intact.join(', ')}</strong> remains solid. No action needed.</p>
+    </div>` : ''
+
+  return `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:600px;margin:0 auto;padding:32px 16px">
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+      <div style="background:linear-gradient(135deg,#1e3a5f,#1d4ed8);padding:28px 32px">
+        <p style="color:#93c5fd;font-size:12px;letter-spacing:.08em;margin:0 0 4px;text-transform:uppercase">ARIA Thesis Tracker</p>
+        <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0">Your Weekly Thesis Review</h1>
+        <p style="color:#bfdbfe;font-size:13px;margin:6px 0 0">${total} theses reviewed — ${data.broken.length} broken, ${data.weakening.length} weakening, ${data.intact.length} intact</p>
+      </div>
+      <div style="padding:28px 32px">
+        <p style="color:#374151;margin:0 0 20px">Hi ${data.name}, here's your weekly thesis review from ARIA:</p>
+        ${brokenSection}${weakeningSection}${intactSection}
+        <div style="text-align:center;margin-top:24px">
+          <a href="${appUrl}/thesis" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">View Full Thesis Tracker →</a>
+        </div>
+      </div>
+      <div style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;text-align:center">
+        <p style="color:#94a3b8;font-size:11px;margin:0">ARIA Research is not a SEBI-registered adviser. For educational purposes only.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+export async function sendThesisWeeklyEmail(data: ThesisWeeklyEmailData): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) {
+    console.log('[email] RESEND_API_KEY not set — skipping thesis weekly email')
+    return false
+  }
+  const broken = data.broken.length, weakening = data.weakening.length
+  const subject = broken > 0
+    ? `❌ ${broken} thesis broken — action needed | ARIA Thesis Review`
+    : weakening > 0
+      ? `⚠️ ${weakening} thesis weakening | ARIA Thesis Review`
+      : `✅ Your theses are intact | ARIA Thesis Review`
+  try {
+    const { error } = await resend.emails.send({ from: FROM, to: data.to, subject, html: thesisWeeklyHtml(data) })
+    if (error) { console.error('[email] Thesis weekly send error:', error); return false }
+    return true
+  } catch (err) {
+    console.error('[email] sendThesisWeeklyEmail failed:', err)
+    return false
+  }
+}
