@@ -7,6 +7,15 @@ import { canRunAnalysis, incrementAnalysisCount } from '@/lib/middleware/roleChe
 import { checkSpendLimit } from '@/lib/spendGuard'
 
 export async function POST(req: NextRequest) {
+  try {
+    return await handlePost(req)
+  } catch (err) {
+    console.error('[analyse] unhandled error:', err)
+    return NextResponse.json({ error: 'Internal server error. Please try again.' }, { status: 500 })
+  }
+}
+
+async function handlePost(req: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -31,6 +40,14 @@ export async function POST(req: NextRequest) {
         error: 'Service temporarily limited',
         message: 'Monthly analysis limit reached. Resets on the 1st. Contact support.',
       },
+      { status: 503 },
+    )
+  }
+
+  // Check Anthropic key is configured
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { error: 'AI service not configured. Add ANTHROPIC_API_KEY to your .env.local file.' },
       { status: 503 },
     )
   }

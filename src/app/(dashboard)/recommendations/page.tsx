@@ -120,6 +120,14 @@ export default function RecommendationsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
+      const contentType = res.headers.get('content-type') ?? ''
+      if (!contentType.includes('application/json')) {
+        // Server returned HTML error page (unhandled crash)
+        if (res.status === 503 || res.status === 500) {
+          throw new Error('AI service unavailable. Check that ANTHROPIC_API_KEY is set in your .env.local file.')
+        }
+        throw new Error(`Server error (${res.status}). Please try again.`)
+      }
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Analysis failed')
       setData(json as AnalysisData)
