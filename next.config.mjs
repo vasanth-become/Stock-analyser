@@ -12,7 +12,7 @@ const nextConfig = {
   experimental: {
     instrumentationHook: true,
     // Keep these server-only packages out of the client/edge bundle
-    serverComponentsExternalPackages: ['@react-pdf/renderer'],
+    serverComponentsExternalPackages: ['@react-pdf/renderer', '@anthropic-ai/sdk'],
   },
 
   images: {
