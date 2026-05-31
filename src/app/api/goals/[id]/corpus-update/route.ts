@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { calculateGoalProjection, generateMilestoneCelebration } from '@/lib/goalClock/goalCalculator'
+import { calculateGoalProjection } from '@/lib/goalClock/goalCalculator'
+import { generateMilestoneCelebration } from '@/lib/goalClock/goalInsights'
 import { z } from 'zod'
 
 const schema = z.object({ corpus: z.number().min(0) })

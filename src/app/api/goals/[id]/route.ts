@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { calculateGoalProjection, generateGoalInsight } from '@/lib/goalClock/goalCalculator'
+import { calculateGoalProjection } from '@/lib/goalClock/goalCalculator'
+import { generateGoalInsight } from '@/lib/goalClock/goalInsights'
 import { z } from 'zod'
 
 async function getGoal(id: string, userId: string) {

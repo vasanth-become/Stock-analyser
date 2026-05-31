@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { calculateGoalProjection, generateGoalInsight } from '@/lib/goalClock/goalCalculator'
+import { calculateGoalProjection } from '@/lib/goalClock/goalCalculator'
+import { generateGoalInsight } from '@/lib/goalClock/goalInsights'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth()
