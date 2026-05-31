@@ -1,5 +1,6 @@
 // PDF generation runs server-side only
 // Uses @react-pdf/renderer with pure Node API (no React rendering)
+import 'server-only'
 import type { ReportData } from './reportGenerator'
 import path from 'path'
 import fs from 'fs'

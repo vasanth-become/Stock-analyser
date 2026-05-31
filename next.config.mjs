@@ -11,13 +11,15 @@ const nextConfig = {
   // Enable server instrumentation (cron init + Sentry + env validation)
   experimental: {
     instrumentationHook: true,
+    // Keep these server-only packages out of the client/edge bundle
+    serverComponentsExternalPackages: ['@react-pdf/renderer'],
   },
 
   images: {
     domains: ['avatars.githubusercontent.com'],
   },
 
-  webpack(config) {
+  webpack(config, { isServer }) {
     config.ignoreWarnings = [{ module: /node_modules\/punycode/ }]
 
     // Webpack treats '.prisma/client/default' as a relative path (starts with '.'),
@@ -26,6 +28,18 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       '.prisma/client/default': require.resolve('.prisma/client/default'),
+    }
+
+    // @react-pdf/renderer (and canvas) use Node.js built-ins — exclude from browser bundle
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        stream: false,
+        child_process: false,
+        canvas: false,
+      }
     }
 
     return config
