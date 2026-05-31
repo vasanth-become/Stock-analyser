@@ -74,7 +74,30 @@ export function initMarketCron(): void {
       }
     })
 
-    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest, monthly reset).')
+    // ── Job 5: Behaviour Guard — every 15 min during market hours ─────────
+    cron.schedule('*/15 * * * 1-5', async () => {
+      if (!isMarketOpen()) return
+      console.log('[cron] Running Behaviour Guard check…')
+      try {
+        const { runBehaviourGuardCheck } = await import('./cron/behaviourGuardMonitor')
+        await runBehaviourGuardCheck()
+      } catch (err) {
+        console.error('[cron] Behaviour Guard check failed:', err)
+      }
+    })
+
+    // ── Job 6: Behaviour Guard end-of-day — 16:00 IST = 10:30 UTC Mon–Fri ─
+    cron.schedule('30 10 * * 1-5', async () => {
+      console.log('[cron] Running Behaviour Guard end-of-day update…')
+      try {
+        const { runEndOfDayBehaviourUpdate } = await import('./cron/behaviourGuardMonitor')
+        await runEndOfDayBehaviourUpdate()
+      } catch (err) {
+        console.error('[cron] Behaviour Guard end-of-day failed:', err)
+      }
+    })
+
+    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest, monthly reset, behaviour guard).')
   }).catch((err) => {
     console.warn('[cron] node-cron unavailable, skipping schedulers:', err.message)
   })

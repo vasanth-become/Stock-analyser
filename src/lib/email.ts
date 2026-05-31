@@ -421,3 +421,151 @@ export async function sendMercuryDigestEmail(
     return false
   }
 }
+
+// ─── Behaviour Guard Alert Email ──────────────────────────────────────────────
+
+import type { CalmMessage } from './behaviourGuard/calmMessageGenerator'
+
+export interface BehaviourGuardEmailData {
+  to: string
+  name: string
+  alertId: string
+  calmMessage: CalmMessage
+  niftyChange: number
+  crashLevel: 'yellow' | 'orange' | 'red'
+}
+
+const CRASH_LEVEL_COLOURS: Record<string, { bg: string; text: string; label: string }> = {
+  yellow: { bg: '#fef9c3', text: '#854d0e', label: 'Choppy Session' },
+  orange: { bg: '#ffedd5', text: '#9a3412', label: 'Broad Selling' },
+  red:    { bg: '#fee2e2', text: '#991b1b', label: 'Sharp Correction' },
+}
+
+function behaviourGuardHtml(data: BehaviourGuardEmailData): string {
+  const { name, alertId, calmMessage, niftyChange, crashLevel } = data
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://stockanalyser.app'
+  const colours = CRASH_LEVEL_COLOURS[crashLevel]
+
+  const stockRows = calmMessage.stockAnalysis.map((s) => {
+    const statusColor =
+      s.thesisStatus === 'intact' ? '#16a34a' :
+      s.thesisStatus === 'weakening' ? '#d97706' : '#dc2626'
+    return `
+    <tr>
+      <td style="padding:12px 0;border-bottom:1px solid #f1f5f9">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div style="min-width:60px">
+            <p style="margin:0;font-size:15px;font-weight:800;color:#0f172a">${s.ticker}</p>
+            <p style="margin:4px 0 0;font-size:12px;color:#dc2626;font-weight:600">${s.drop}</p>
+          </div>
+          <div>
+            <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:${statusColor}20;color:${statusColor};text-transform:uppercase;margin-bottom:6px">${s.thesisStatus}</span>
+            <p style="margin:0;font-size:13px;color:#374151;line-height:1.5">${s.fundamentalUpdate}</p>
+          </div>
+        </div>
+      </td>
+    </tr>`
+  }).join('')
+
+  const actionPoints = calmMessage.actionPlan.split('|').map(
+    (pt) => `<li style="margin-bottom:8px;color:#374151;font-size:14px;line-height:1.6">${pt.trim()}</li>`
+  ).join('')
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:580px;margin:32px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+
+    <!-- Header — calming blue, NOT red -->
+    <div style="background:linear-gradient(135deg,#1e3a5f,#1d4ed8);padding:28px 32px">
+      <p style="margin:0 0 6px;color:#93c5fd;font-size:12px;font-weight:700;letter-spacing:0.08em">🛡️ ARIA BEHAVIOUR GUARD</p>
+      <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;line-height:1.3">${calmMessage.headline}</h1>
+    </div>
+
+    <!-- Crash level badge -->
+    <div style="background:${colours.bg};padding:10px 32px">
+      <p style="margin:0;color:${colours.text};font-size:13px;font-weight:600">
+        Nifty 50: <strong>${niftyChange.toFixed(2)}%</strong> &nbsp;·&nbsp; ${colours.label}
+      </p>
+    </div>
+
+    <div style="padding:28px 32px">
+      <p style="margin:0 0 20px;color:#374151;font-size:15px">Hi ${name},</p>
+
+      <!-- Market context -->
+      <div style="background:#f0f7ff;border-left:4px solid #3b82f6;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:24px">
+        <p style="margin:0;color:#1e40af;font-size:14px;line-height:1.7">${calmMessage.marketContext}</p>
+      </div>
+
+      <!-- Stock analysis -->
+      ${calmMessage.stockAnalysis.length > 0 ? `
+      <h2 style="margin:0 0 12px;color:#0f172a;font-size:16px;font-weight:800">Your Watchlist Today</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px">${stockRows}</table>
+      ` : ''}
+
+      <!-- Action plan -->
+      <div style="background:#f8fafc;border-radius:10px;padding:20px;margin-bottom:24px">
+        <p style="margin:0 0 12px;color:#1e293b;font-size:14px;font-weight:700">📋 Your Calm Action Plan</p>
+        <ul style="margin:0;padding-left:20px">${actionPoints}</ul>
+      </div>
+
+      <!-- Grounding question -->
+      <div style="background:#fef3c7;border-radius:10px;padding:16px 20px;margin-bottom:24px">
+        <p style="margin:0;color:#92400e;font-size:14px;font-weight:600">🤔 Before you do anything, ask yourself:</p>
+        <p style="margin:8px 0 0;color:#78350f;font-size:15px;font-style:italic">"${calmMessage.groundingQuestion}"</p>
+      </div>
+
+      <!-- CTA buttons -->
+      <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+        <a href="${appUrl}/api/behaviour/response?alertId=${alertId}&response=stay_course&redirect=1"
+          style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700">
+          ✅ I'm staying the course
+        </a>
+        <a href="${appUrl}/api/behaviour/response?alertId=${alertId}&response=research_more&redirect=1"
+          style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700">
+          🔍 I need to research more
+        </a>
+      </div>
+
+      <!-- Behaviour tip -->
+      <p style="margin:0;color:#64748b;font-size:13px;font-style:italic;border-top:1px solid #f1f5f9;padding-top:16px">
+        💡 ${calmMessage.behaviourTip}
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px">
+      <p style="margin:0 0 6px;color:#94a3b8;font-size:12px">
+        <a href="${appUrl}/dashboard/behaviour" style="color:#3b82f6;text-decoration:none">View your Behaviour Dashboard</a>
+        &nbsp;·&nbsp;
+        <a href="${appUrl}/dashboard/alerts" style="color:#3b82f6;text-decoration:none">Manage alerts</a>
+      </p>
+      <p style="margin:8px 0 0;color:#cbd5e1;font-size:11px">
+        ARIA Research is not a SEBI-registered adviser. Research outputs are for educational purposes only. Always consult a qualified financial adviser before making investment decisions.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+export async function sendBehaviourGuardAlert(data: BehaviourGuardEmailData): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) {
+    console.log('[email] RESEND_API_KEY not set — skipping behaviour guard alert for', data.to)
+    return false
+  }
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to: data.to,
+      subject: `🛡️ ARIA Behaviour Guard | Markets are down — read this before you do anything`,
+      html: behaviourGuardHtml(data),
+    })
+    if (error) { console.error('[email] Behaviour guard send error:', error); return false }
+    return true
+  } catch (err) {
+    console.error('[email] sendBehaviourGuardAlert failed:', err)
+    return false
+  }
+}

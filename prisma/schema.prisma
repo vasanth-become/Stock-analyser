@@ -38,8 +38,59 @@ model User {
   accounts             Account[]
   portfolio            Portfolio?
   subscriptionEvents   SubscriptionEvent[]
+  behaviourEvents      BehaviourEvent[]
+  behaviourScore       BehaviourScore?
+  behaviourAlerts      BehaviourAlert[]
 
   @@map("users")
+}
+
+model BehaviourEvent {
+  id             String   @id @default(cuid())
+  userId         String
+  eventType      String   // "panic_detected" | "panic_overridden" | "calm_confirmed" | "sell_prevented" | "thesis_checked"
+  marketDrop     Float
+  userAction     String?
+  stocksAffected String[]
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("behaviour_events")
+}
+
+model BehaviourScore {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  score         Int      @default(50)
+  totalEvents   Int      @default(0)
+  panicsStopped Int      @default(0)
+  sipsKept      Int      @default(0)
+  holdingsKept  Int      @default(0)
+  badDecisions  Int      @default(0)
+  lastUpdated   DateTime @default(now())
+  badges        String[]
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("behaviour_scores")
+}
+
+model BehaviourAlert {
+  id           String   @id @default(cuid())
+  userId       String
+  alertType    String   // "market_crash" | "stock_crash" | "portfolio_down"
+  triggerValue Float
+  message      String   @db.Text
+  wasRead      Boolean  @default(false)
+  userResponse String?  // "stay_course" | "research_more" | "ignored"
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, wasRead])
+  @@map("behaviour_alerts")
 }
 
 model SubscriptionEvent {
