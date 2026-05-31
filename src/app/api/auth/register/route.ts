@@ -38,6 +38,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Account created successfully' }, { status: 201 })
   } catch (error) {
     console.error('[register]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : String(error)
+    if (msg.includes('connect') || msg.includes('ECONNREFUSED') || msg.includes("Can't reach database")) {
+      return NextResponse.json({ error: 'Database not reachable. Check DATABASE_URL in .env.local.' }, { status: 503 })
+    }
+    return NextResponse.json({ error: 'Internal server error', detail: process.env.NODE_ENV === 'development' ? msg : undefined }, { status: 500 })
   }
 }
