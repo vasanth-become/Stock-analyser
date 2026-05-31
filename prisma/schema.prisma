@@ -45,6 +45,7 @@ model User {
   languagePreference   UserLanguagePreference?
   financialGoals       FinancialGoal[]
   stockTheses          StockThesis[]
+  quarterlyReports     QuarterlyReport[]
 
   @@map("users")
 }
@@ -99,6 +100,28 @@ model GoalSnapshot {
 
   @@index([goalId, snapshotDate])
   @@map("goal_snapshots")
+}
+
+// ─── Module 15: Quarterly Report ─────────────────────────────────────────────
+
+model QuarterlyReport {
+  id             String    @id @default(cuid())
+  userId         String
+  quarter        String
+  generatedAt    DateTime  @default(now())
+  portfolioScore Int       @default(0)
+  portfolioGrade String    @default("B")
+  reportData     Json
+  pdfUrl         String?
+  wasEmailed     Boolean   @default(false)
+  wasRead        Boolean   @default(false)
+  readAt         DateTime?
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, quarter])
+  @@index([userId, generatedAt])
+  @@map("quarterly_reports")
 }
 
 // ─── Module 14: Thesis Tracker ───────────────────────────────────────────────

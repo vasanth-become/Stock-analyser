@@ -732,6 +732,106 @@ function thesisWeeklyHtml(data: ThesisWeeklyEmailData): string {
 </html>`
 }
 
+// ─── Quarterly Report email (Module 15) ─────────────────────────────────────
+
+export interface QuarterlyReportEmailData {
+  to: string
+  name: string
+  quarter: string
+  grade: string
+  score: number
+  headline: string
+  keyWins: string[]
+  keyActions: string[]
+  rebalanceNeeded: boolean
+  reportUrl: string
+  isPro: boolean
+}
+
+function quarterlyReportHtml(data: QuarterlyReportEmailData): string {
+  const gradeColour = data.grade.startsWith('A') ? '#d97706' : data.grade.startsWith('B') ? '#1A56DB' : data.grade === 'C' ? '#f59e0b' : '#ef4444'
+  const wins = data.keyWins.map((w) => `<li style="margin-bottom:8px;color:#374151;font-size:14px">✅ ${w}</li>`).join('')
+  const actions = data.keyActions.map((a, i) => `<li style="margin-bottom:8px;color:#374151;font-size:14px"><strong>${i + 1}.</strong> ${a}</li>`).join('')
+
+  return `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:600px;margin:0 auto;padding:32px 16px">
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.10)">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#1a365d,#1A56DB);padding:36px 40px;text-align:center">
+        <p style="color:#93c5fd;font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 8px">ARIA Research · Confidential</p>
+        <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0 0 8px">${data.quarter} Portfolio Health Report</h1>
+        <p style="color:#bfdbfe;font-size:14px;margin:0">Your quarterly review is ready</p>
+        <!-- Grade -->
+        <div style="display:inline-block;background:${gradeColour};color:#fff;font-size:48px;font-weight:900;width:88px;height:88px;border-radius:44px;line-height:88px;text-align:center;margin:24px auto 8px;box-shadow:0 0 0 4px rgba(255,255,255,.3)">
+          ${data.grade}
+        </div>
+        <p style="color:#bfdbfe;font-size:13px;margin:0">Score: ${data.score}/100</p>
+      </div>
+
+      <div style="padding:32px 40px">
+        <p style="color:#374151;margin:0 0 8px;font-size:15px">Hi ${data.name},</p>
+        <p style="color:#374151;margin:0 0 24px;font-size:14px;line-height:1.6">${data.headline}</p>
+
+        <!-- Wins -->
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px 20px;margin-bottom:16px">
+          <p style="color:#15803d;font-weight:700;font-size:13px;margin:0 0 10px;text-transform:uppercase">🏆 Key Wins This Quarter</p>
+          <ul style="margin:0;padding-left:0;list-style:none">${wins}</ul>
+        </div>
+
+        <!-- Actions -->
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px 20px;margin-bottom:16px">
+          <p style="color:#1d4ed8;font-weight:700;font-size:13px;margin:0 0 10px;text-transform:uppercase">→ Priority Actions Next Quarter</p>
+          <ul style="margin:0;padding-left:0;list-style:none">${actions}</ul>
+        </div>
+
+        ${data.rebalanceNeeded ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 20px;margin-bottom:24px">
+          <p style="color:#b45309;font-weight:700;font-size:13px;margin:0">⚠️ Rebalancing Recommended</p>
+          <p style="color:#92400e;font-size:13px;margin:6px 0 0">Your portfolio needs attention. View your full report for the rebalance action plan.</p>
+        </div>` : ''}
+
+        <!-- CTA -->
+        <div style="text-align:center;margin:28px 0">
+          <a href="${data.reportUrl}" style="display:inline-block;background:#1A56DB;color:#fff;text-decoration:none;padding:14px 36px;border-radius:10px;font-weight:700;font-size:15px">View Full Report →</a>
+        </div>
+
+        ${!data.isPro ? `<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:16px 20px;text-align:center">
+          <p style="color:#7c3aed;font-weight:700;font-size:13px;margin:0 0 6px">👑 Upgrade to Pro</p>
+          <p style="color:#6d28d9;font-size:13px;margin:0">Download your full 8-page PDF report, get priority ARIA analysis, and access all historical reports.</p>
+          <a href="${data.reportUrl.split('/reports')[0]}/billing" style="display:inline-block;margin-top:12px;background:#7c3aed;color:#fff;text-decoration:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600">Upgrade Now</a>
+        </div>` : ''}
+      </div>
+
+      <div style="background:#f8fafc;padding:16px 40px;border-top:1px solid #e2e8f0;text-align:center">
+        <p style="color:#94a3b8;font-size:11px;margin:0;line-height:1.5">ARIA Research is not a SEBI-registered adviser. This report is for educational purposes only and does not constitute investment advice. Investments are subject to market risks.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+export async function sendQuarterlyReportEmail(data: QuarterlyReportEmailData): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) {
+    console.log('[email] RESEND_API_KEY not set — skipping quarterly report email')
+    return false
+  }
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to: data.to,
+      subject: `Your ${data.quarter} ARIA Portfolio Report — Grade: ${data.grade}`,
+      html: quarterlyReportHtml(data),
+    })
+    if (error) { console.error('[email] Quarterly report send error:', error); return false }
+    return true
+  } catch (err) {
+    console.error('[email] sendQuarterlyReportEmail failed:', err)
+    return false
+  }
+}
+
 export async function sendThesisWeeklyEmail(data: ThesisWeeklyEmailData): Promise<boolean> {
   if (!process.env.RESEND_API_KEY) {
     console.log('[email] RESEND_API_KEY not set — skipping thesis weekly email')

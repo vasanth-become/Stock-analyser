@@ -119,7 +119,18 @@ export function initMarketCron(): void {
       }
     })
 
-    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest, monthly reset, behaviour guard, goal monthly update, thesis review).')
+    // ── Job 9: Quarterly report — 1st of Jan/Apr/Jul/Oct at 04:00 UTC (09:30 IST) ─
+    cron.schedule('0 4 1 1,4,7,10 *', async () => {
+      console.log('[cron] Generating quarterly reports…')
+      try {
+        const { runQuarterlyReportGeneration } = await import('./cron/quarterlyReportGenerator')
+        await runQuarterlyReportGeneration()
+      } catch (err) {
+        console.error('[cron] Quarterly report generation failed:', err)
+      }
+    })
+
+    console.log('[cron] All schedulers started (market refresh, alert checker, weekly digest, monthly reset, behaviour guard, goal monthly update, thesis review, quarterly reports).')
   }).catch((err) => {
     console.warn('[cron] node-cron unavailable, skipping schedulers:', err.message)
   })
