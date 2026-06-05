@@ -54,15 +54,14 @@ const nextConfig = {
   async redirects() {
     return [
       // Old standalone pages → new consolidated sections
+      // NOTE: wildcard sub-path redirects removed so /goals/new, /goals/[id],
+      //       /thesis/[id], /reports/[id] continue to work at their original URLs
       { source: '/watchlist',     destination: '/dashboard/investments?tab=watchlist',       permanent: false },
       { source: '/portfolio',     destination: '/dashboard/investments?tab=portfolio',        permanent: false },
       { source: '/thesis',        destination: '/dashboard/investments?tab=research-notes',   permanent: false },
-      { source: '/thesis/:path*', destination: '/dashboard/investments?tab=research-notes',   permanent: false },
       { source: '/goals',         destination: '/dashboard/plan?tab=goals',                   permanent: false },
-      { source: '/goals/:path*',  destination: '/dashboard/plan?tab=goals',                   permanent: false },
       { source: '/sip-planner',   destination: '/dashboard/plan?tab=sip',                     permanent: false },
       { source: '/reports',       destination: '/dashboard/plan?tab=reports',                  permanent: false },
-      { source: '/reports/:path*',destination: '/dashboard/plan?tab=reports',                  permanent: false },
       { source: '/behaviour',     destination: '/dashboard/alerts',                            permanent: false },
       { source: '/alerts',        destination: '/dashboard/alerts',                            permanent: false },
       { source: '/ask-aria',      destination: '/dashboard/aria',                              permanent: false },
