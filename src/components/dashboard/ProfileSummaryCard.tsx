@@ -43,7 +43,7 @@ export function ProfileSummaryCard({ profile }: { profile: InvestorProfile | nul
               Get personalised stock recommendations and AI analysis tailored to your risk appetite.
             </p>
           </div>
-          <Link href="/dashboard/profile">
+          <Link href="/profile">
             <Button size="sm" className="gap-1 mt-1">
               Set Up Profile <ArrowRight className="h-3.5 w-3.5" />
             </Button>
@@ -65,7 +65,7 @@ export function ProfileSummaryCard({ profile }: { profile: InvestorProfile | nul
             <ShieldCheck className="h-5 w-5 text-blue-600" />
             Investor Profile
           </CardTitle>
-          <Link href="/dashboard/profile">
+          <Link href="/profile">
             <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 gap-1 h-8 text-xs">
               Edit preferences <ArrowRight className="h-3 w-3" />
             </Button>
@@ -77,7 +77,7 @@ export function ProfileSummaryCard({ profile }: { profile: InvestorProfile | nul
           <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 flex items-center gap-2">
             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
             Profile incomplete — some preferences are missing.
-            <Link href="/dashboard/profile" className="underline font-medium">Complete now</Link>
+            <Link href="/profile" className="underline font-medium">Complete now</Link>
           </div>
         )}
 
