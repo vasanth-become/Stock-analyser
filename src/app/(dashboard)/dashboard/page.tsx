@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Activity, IndianRupee, BarChart2, Sparkles, Target } from 'lucide-react'
+import { TrendingUp, TrendingDown, Activity, IndianRupee, Sparkles, Target, Bell } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -7,6 +7,8 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ProfileSummaryCard } from '@/components/dashboard/ProfileSummaryCard'
 import { calculateGoalProjection } from '@/lib/goalClock/goalCalculator'
+
+// ─── Static market data ────────────────────────────────────────────────────────
 
 const marketIndices = [
   { name: 'NIFTY 50', value: '22,456.80', change: '+234.50', pct: '+1.05%', up: true },
@@ -27,6 +29,23 @@ const topLosers = [
   { symbol: 'ONGC', name: 'ONGC', price: '198.45', change: '-1.54%' },
 ]
 
+// ─── Market status helper ──────────────────────────────────────────────────────
+
+function isMarketOpen(): boolean {
+  const now = new Date()
+  // IST = UTC+5:30
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60_000
+  const istMs = utcMs + 5.5 * 60 * 60_000
+  const ist = new Date(istMs)
+  const day = ist.getDay() // 0=Sun, 6=Sat
+  if (day === 0 || day === 6) return false
+  const h = ist.getHours(), m = ist.getMinutes()
+  const mins = h * 60 + m
+  return mins >= 555 && mins < 930 // 9:15–15:30 IST
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
+
 export default async function DashboardPage() {
   const session = await auth()
   const [profile, primaryGoal] = await Promise.all([
@@ -34,23 +53,47 @@ export default async function DashboardPage() {
       ? prisma.investorProfile.findUnique({ where: { userId: session.user.id } })
       : null,
     session?.user?.id
-      // financialGoal requires schema migration — fail gracefully if table doesn't exist yet
       ? (prisma.financialGoal as typeof prisma.financialGoal | undefined)
           ?.findFirst({ where: { userId: session.user.id, isActive: true, isPrimary: true } })
           .catch(() => null) ?? null
       : null,
   ])
+
   const greeting = profile?.displayName || session?.user?.name?.split(' ')[0] || 'Investor'
   const goalProjection = primaryGoal ? calculateGoalProjection(primaryGoal) : null
+  const marketOpen = isMarketOpen()
 
   return (
     <div className="space-y-6">
+
+      {/* ── Section A: Market Pulse Bar ── */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Badge
+          variant={marketOpen ? 'default' : 'secondary'}
+          className={marketOpen ? 'bg-green-600 hover:bg-green-600' : ''}
+        >
+          {marketOpen ? '● Market Open' : '○ Market Closed'}
+        </Badge>
+        <div className="flex items-center gap-4 flex-wrap">
+          {marketIndices.map((idx) => (
+            <div key={idx.name} className="flex items-center gap-1.5 text-sm">
+              <span className="text-gray-500 font-medium">{idx.name}</span>
+              <span className="font-bold text-gray-900">{idx.value}</span>
+              <span className={`text-xs font-medium ${idx.up ? 'text-green-600' : 'text-red-600'}`}>
+                {idx.pct}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Section B: Personal Greeting ── */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Good morning, {greeting} 👋</h1>
           <p className="text-gray-500 text-sm mt-1">Here is your personalised research for today.</p>
         </div>
-        <Link href="/analysis">
+        <Link href="/dashboard/aria">
           <Button className="gap-2">
             <Sparkles className="h-4 w-4" />
             Run AI Research
@@ -58,7 +101,33 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* Market Indices */}
+      {/* ── Section C: Research Summary ── */}
+      <Card className="border-blue-100 bg-blue-50/40">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-blue-600" />
+            Today&apos;s Research Summary
+          </CardTitle>
+          <CardDescription>AI-powered stock picks based on your investor profile</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* No live /api/analysis call on server — show CTA that links to ARIA hub */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <p className="text-sm text-gray-600">
+              Get AI analysis personalised to your risk profile and goals.
+            </p>
+            <Link href="/dashboard/aria">
+              <Button size="sm" className="gap-2">
+                <Sparkles className="h-3.5 w-3.5" />
+                Run today&apos;s research →
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Section D + E: Market Snapshot & Top Movers ── */}
+      {/* Market Indices Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {marketIndices.map((idx) => (
           <Card key={idx.name}>
@@ -79,41 +148,6 @@ export default async function DashboardPage() {
         {/* Investor Profile Summary */}
         <ProfileSummaryCard profile={profile} />
 
-        {/* Portfolio Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <IndianRupee className="h-5 w-5 text-blue-600" />
-              Portfolio Tracker
-            </CardTitle>
-            <CardDescription>Your holdings summary — tracking tool only</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-500">Total Value</p>
-              <p className="text-2xl font-bold text-gray-900">₹4,82,340.50</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-gray-500">Invested</p>
-                <p className="font-semibold text-gray-900">₹4,20,000</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Gain/Loss</p>
-                <p className="font-semibold text-green-600">+₹62,340 (+14.8%)</p>
-              </div>
-            </div>
-            <div className="pt-2 border-t">
-              <p className="text-xs text-gray-500">Today&apos;s Change</p>
-              <p className="font-semibold text-green-600">+₹3,421 (+0.71%)</p>
-            </div>
-            <p className="text-[10px] text-gray-400">P&L based on manually entered prices and live data. ARIA Research does not execute trades.</p>
-            <Link href="/portfolio">
-              <Button variant="outline" className="w-full mt-2">View Portfolio Tracker</Button>
-            </Link>
-          </CardContent>
-        </Card>
-
         {/* Top Gainers */}
         <Card>
           <CardHeader>
@@ -126,18 +160,16 @@ export default async function DashboardPage() {
           <CardContent>
             <div className="space-y-3">
               {topGainers.map((stock) => (
-                <Link key={stock.symbol} href={`/stock/${stock.symbol}`}>
-                  <div className="flex items-center justify-between py-2 hover:bg-gray-50 rounded-md px-2 -mx-2 transition-colors">
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">{stock.symbol}</p>
-                      <p className="text-xs text-gray-500">{stock.name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900 text-sm">₹{stock.price}</p>
-                      <Badge variant="success">{stock.change}</Badge>
-                    </div>
+                <div key={stock.symbol} className="flex items-center justify-between py-2 hover:bg-gray-50 rounded-md px-2 -mx-2 transition-colors">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">{stock.symbol}</p>
+                    <p className="text-xs text-gray-500">{stock.name}</p>
                   </div>
-                </Link>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900 text-sm">₹{stock.price}</p>
+                    <Badge variant="success">{stock.change}</Badge>
+                  </div>
+                </div>
               ))}
             </div>
           </CardContent>
@@ -155,25 +187,43 @@ export default async function DashboardPage() {
           <CardContent>
             <div className="space-y-3">
               {topLosers.map((stock) => (
-                <Link key={stock.symbol} href={`/stock/${stock.symbol}`}>
-                  <div className="flex items-center justify-between py-2 hover:bg-gray-50 rounded-md px-2 -mx-2 transition-colors">
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">{stock.symbol}</p>
-                      <p className="text-xs text-gray-500">{stock.name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900 text-sm">₹{stock.price}</p>
-                      <Badge variant="destructive">{stock.change}</Badge>
-                    </div>
+                <div key={stock.symbol} className="flex items-center justify-between py-2 hover:bg-gray-50 rounded-md px-2 -mx-2 transition-colors">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">{stock.symbol}</p>
+                    <p className="text-xs text-gray-500">{stock.name}</p>
                   </div>
-                </Link>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900 text-sm">₹{stock.price}</p>
+                    <Badge variant="destructive">{stock.change}</Badge>
+                  </div>
+                </div>
               ))}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Goal Clock Widget */}
+      {/* ── Section F: Discipline Score ── */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <Bell className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">Discipline Score</p>
+                <p className="text-xs text-gray-500">Track your alerts and investing habits</p>
+              </div>
+            </div>
+            <Link href="/dashboard/alerts">
+              <Button variant="outline" size="sm">View Alerts →</Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Section G: Goal Clock Widget ── */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -181,7 +231,7 @@ export default async function DashboardPage() {
               <Target className="h-5 w-5 text-blue-600" />
               Goal Clock
             </CardTitle>
-            <Link href="/goals" className="text-sm text-blue-600 hover:underline">View all goals →</Link>
+            <Link href="/dashboard/plan?tab=goals" className="text-sm text-blue-600 hover:underline">View all goals →</Link>
           </div>
         </CardHeader>
         <CardContent>
@@ -229,14 +279,14 @@ export default async function DashboardPage() {
                   </p>
                 )}
               </div>
-              <Link href={`/goals/${primaryGoal.id}`}>
+              <Link href={`/dashboard/plan?tab=goals`}>
                 <Button variant="outline" size="sm">View</Button>
               </Link>
             </div>
           ) : (
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-500">No financial goals set yet. Start tracking your dreams.</p>
-              <Link href="/goals/new">
+              <Link href="/dashboard/plan?tab=goals">
                 <Button size="sm" className="gap-1.5">
                   <Target className="h-3.5 w-3.5" />
                   Set your first goal
@@ -247,7 +297,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
+      {/* ── Section H: Quick Actions ── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -258,12 +308,12 @@ export default async function DashboardPage() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { href: '/search', label: 'Search Stocks', icon: '🔍' },
-              { href: '/analysis', label: 'Run AI Research', icon: '🤖' },
-              { href: '/portfolio', label: 'Update Holdings', icon: '📊' },
-              { href: '/alerts', label: 'Set Price Alert', icon: '🔔' },
+              { href: '/dashboard/aria', label: 'Run Research', icon: '🤖' },
+              { href: '/dashboard/investments?tab=watchlist', label: 'Add to Watchlist', icon: '👀' },
+              { href: '/dashboard/plan?tab=goals', label: 'Check Goals', icon: '🎯' },
+              { href: '/dashboard/aria', label: 'Ask ARIA', icon: '💬' },
             ].map(({ href, label, icon }) => (
-              <Link key={href} href={href}>
+              <Link key={`${href}-${label}`} href={href}>
                 <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer">
                   <span className="text-2xl">{icon}</span>
                   <span className="text-sm font-medium text-gray-700 text-center">{label}</span>
@@ -280,19 +330,54 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
-                <BarChart2 className="h-6 w-6 text-white" />
+                <Sparkles className="h-6 w-6 text-white" />
               </div>
               <div>
                 <p className="font-semibold text-white text-lg">Get AI-powered research insights</p>
                 <p className="text-blue-100 text-sm">ARIA analyses NSE/BSE market data against your investor profile</p>
               </div>
             </div>
-            <Link href="/analysis">
+            <Link href="/dashboard/aria">
               <Button variant="secondary" className="bg-white text-blue-700 hover:bg-blue-50">
                 Run Research →
               </Button>
             </Link>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Portfolio Tracker card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <IndianRupee className="h-5 w-5 text-blue-600" />
+            Portfolio Tracker
+          </CardTitle>
+          <CardDescription>Your holdings summary — tracking tool only</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-sm text-gray-500">Total Value</p>
+            <p className="text-2xl font-bold text-gray-900">₹4,82,340.50</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-gray-500">Invested</p>
+              <p className="font-semibold text-gray-900">₹4,20,000</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Gain/Loss</p>
+              <p className="font-semibold text-green-600">+₹62,340 (+14.8%)</p>
+            </div>
+          </div>
+          <div className="pt-2 border-t">
+            <p className="text-xs text-gray-500">Today&apos;s Change</p>
+            <p className="font-semibold text-green-600">+₹3,421 (+0.71%)</p>
+          </div>
+          <p className="text-[10px] text-gray-400">P&L based on manually entered prices and live data. ARIA Research does not execute trades.</p>
+          <Link href="/dashboard/investments">
+            <Button variant="outline" className="w-full mt-2">View Portfolio Tracker</Button>
+          </Link>
         </CardContent>
       </Card>
     </div>

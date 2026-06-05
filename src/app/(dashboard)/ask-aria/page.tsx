@@ -168,6 +168,17 @@ export default function AskAriaPage() {
       .catch(() => {})
 
     setVoiceSupported('SpeechRecognition' in window || 'webkitSpeechRecognition' in (window as object))
+
+    // Handle pre-filled message sent from the ARIA hub page
+    const handlePrefill = (e: Event) => {
+      const msg = (e as CustomEvent<{ message: string }>).detail?.message
+      if (msg) {
+        setInput(msg)
+        setTimeout(() => inputRef.current?.focus(), 50)
+      }
+    }
+    window.addEventListener('aria:prefill', handlePrefill)
+    return () => window.removeEventListener('aria:prefill', handlePrefill)
   }, [])
 
   // Load a conversation
